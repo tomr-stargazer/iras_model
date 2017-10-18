@@ -1,0 +1,7 @@
+I am attempting to set up a VERY SIMPLE, no-frills script which does the following:
+
+- Sets up the physical model of IRAS16293 which is EXACTLY the same as is used in Coutens 2012 / Crimier 2010
+- Models the emission of the h13cn lines which we have observational data for, from Herschel (CHESS) and IRAM30m/JCMT (TIMASSS). Including primary beam corrections, etc when necessary.
+- Does some chi2 fitting to get a best fit for the abundance distribution of h13cn and HCN.
+
+This is a VERY one-off project so I will emphasize "half-assing" it, and will not attempt to make anything "portable" for re-use. Nonethlesss, it will be written with good style in mind.
