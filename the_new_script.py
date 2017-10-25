@@ -24,8 +24,7 @@ import astropy.constants as c
 import transphere_python.transphereRatran as tR
 
 
-Jupper_list = [1,3,4,6,7,8,9,10,11]
-# transition_list = 
+Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
 
 
 def prepare_real_data():
@@ -37,11 +36,10 @@ def prepare_fake_data(vel_array):
     fake_data_dict = {}
 
     for Jupper in Jupper_list:
-        fake_data_dict[Jupper] = {'vel': vel_array, 'jy': np.zeros_like(vel_array)}
+        fake_data_dict[Jupper] = {
+            'vel': vel_array, 'jy': np.zeros_like(vel_array)}
 
     return fake_data_dict
-
-
 
 
 def chisq_line(observed_data, model_data, rms_per_channel, calibration_uncertainty=0.15):
@@ -64,18 +62,18 @@ def prepare_model(abundance, run_ratran=True):
 
     # pdb.set_trace()
 
-    ### Phase 2: Run the AMC/Ratran situation.
+    # Phase 2: Run the AMC/Ratran situation.
 
     os.makedirs("./h13cn_emission_models/", exist_ok=True)
 
-    transition_list = [1,3,4,6,7,8,9,10,11]
+    transition_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
     transitions_string = ",".join(str(x) for x in transition_list)
-    frequency_list = u.Quantity([86.3399, 172.6778, 259.0117, 345.3397, 431.6597, 517.9698, 604.2679, 
-                                690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
+    frequency_list = u.Quantity([86.3399, 172.6778, 259.0117, 345.3397, 431.6597, 517.9698, 604.2679,
+                                 690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
 
     if run_ratran:
         tR.ratranRun(r=radius_array.value, rho=density_array.value, temp=temp_array.value, db=3.63,
-                     abund=abundance_array, dpc=distance.value, trans=transitions_string, 
+                     abund=abundance_array, dpc=distance.value, trans=transitions_string,
                      molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=0,
                      channels=100, channel_width=0.23,
                      outputfile='h13cn_emission_models/ratranResult_h13cn')
@@ -85,7 +83,7 @@ def prepare_model(abundance, run_ratran=True):
     os.makedirs("./h13cn_miriad_manipulation/", exist_ok=True)
 
     for i, filename in enumerate(list_of_filenames):
-        
+
         J_upper = transition_list[i]
         freq = frequency_list[i]
 
@@ -94,22 +92,26 @@ def prepare_model(abundance, run_ratran=True):
         # make this os.system later but we're proofing it first.
         call_fn = os.system
 
-        remove_file_if_exists = 'rm -rf h13cn_miriad_manipulation/h13cn_{0:03d}.sky'.format(J_upper)
+        remove_file_if_exists = 'rm -rf h13cn_miriad_manipulation/h13cn_{0:03d}.sky'.format(
+            J_upper)
         call_fn(remove_file_if_exists)
 
-        convert_fits_to_miriad = 'fits in={0} out=h13cn_miriad_manipulation/h13cn_{1:03d}.sky op=xyin'.format(filename, J_upper)
+        convert_fits_to_miriad = 'fits in={0} out=h13cn_miriad_manipulation/h13cn_{1:03d}.sky op=xyin'.format(
+            filename, J_upper)
         call_fn(convert_fits_to_miriad)
 
-        put_frequency_in_header = 'puthd in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky/restfreq value={1:.3f}'.format(J_upper, freq.value)
+        put_frequency_in_header = 'puthd in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky/restfreq value={1:.3f}'.format(
+            J_upper, freq.value)
         call_fn(put_frequency_in_header)
 
         # Make a spectrum and output it
-        make_spectrum = 'imspect in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky log=h13cn_{0:03d}.spectrum'.format(J_upper, freq.value)
+        make_spectrum = 'imspect in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky log=h13cn_miriad_manipulation/h13cn_{0:03d}.spectrum'.format(
+            J_upper, freq.value)
         call_fn(make_spectrum)
- 
+
     model_dict = OrderedDict()
 
-    list_of_spectra = glob.glob("*.spectrum")
+    list_of_spectra = glob.glob("h13cn_miriad_manipulation/*.spectrum")
     for i, spectrum in enumerate(list_of_spectra):
 
         print(i, spectrum)
@@ -134,9 +136,11 @@ def plot_model(model_dict, data_dict=None):
     for i, J_upper in enumerate(model_dict.keys()):
 
         ax = fig.add_subplot(3, 3, i+1, sharey=ax0)
-        ax.plot(model_dict[J_upper]['vel'], model_dict[J_upper]['jy'], linestyle='steps-mid')
+        ax.plot(model_dict[J_upper]['vel'], model_dict[
+                J_upper]['jy'], linestyle='steps-mid')
         if data_dict is not None:
-            ax.plot(data_dict[J_upper]['vel'], data_dict[J_upper]['jy'], 'r:', linestyle='steps-mid')
+            ax.plot(data_dict[J_upper]['vel'], data_dict[
+                    J_upper]['jy'], 'r:', linestyle='steps-mid')
 
         plt.show()
 
@@ -147,17 +151,12 @@ def plot_model(model_dict, data_dict=None):
 
 # def compare_model_to_observations(model_dict, obs_dict)
 
-
-inner_abundance_grid = np.logspace(-10, -5, 3)
-outer_abundance_grid = np.logspace(-10, -5, 4)
-
-chisq_grid = np.zeros((len(inner_abundance_grid), len(outer_abundance_grid)))
-
+abundance_grid = np.logspace(-10, -8, 3)
 # pdb.set_trace()
 
 # simple model: only one abundance
 if True:
-    for abundance in inner_abundance_grid:
+    for abundance in abundance_grid:
 
         models = prepare_model(abundance)
         data = prepare_fake_data(models[1]['vel'])
@@ -169,8 +168,8 @@ if True:
             line_chi2 = chisq_line(x['jy'], y['jy'], placeholder_rms)
             # pdb.set_trace()
 
-        chi2_of_model = np.sum( [chisq_line(x['jy'], y['jy'], placeholder_rms)
-                                 for x, y in zip(data.values(), models.values())] )
+        chi2_of_model = np.sum([chisq_line(x['jy'], y['jy'], placeholder_rms)
+                                for x, y in zip(data.values(), models.values())])
 
         print("\n\n***********************")
         print("***********************")
@@ -182,14 +181,3 @@ if True:
         fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
 
         pdb.set_trace()
-
-
-if False:
-    for inner_abundance in inner_abundance_grid:
-
-        for outer_abundance in outer_abundance_grid:
-
-            print ("inner abundance: {0:.1e}\nouter abundance: {1:.1e}\n".
-                   format(inner_abundance, outer_abundance))
-
-
