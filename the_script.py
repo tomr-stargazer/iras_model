@@ -29,11 +29,11 @@ import transphere_python.transphereRatran as tR
 distance = 120 * u.pc
 
 rho_nought = 9.0e-16 * u.g * u.cm**-3
-radius_array = (np.arange(0, 1000, 50)*u.AU).to(u.cm)
+radius_array = (np.arange(1, 1000, 50)*u.AU).to(u.cm)
 density_array = (radius_array.to(u.AU)/(1*u.AU))**-1.5 * rho_nought
 
 temp_array = np.ones_like(radius_array)*50*u.K
-abundance_array = np.ones_like(radius_array.value) * 1e-7
+abundance_array = np.ones_like(radius_array.value) * 1e-10
 
 pdb.set_trace()
 
@@ -46,10 +46,13 @@ transitions_string = ",".join(str(x) for x in transition_list)
 frequency_list = u.Quantity([86.3399, 172.6778, 259.0117, 345.3397, 431.6597, 517.9698, 604.2679, 
                             690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
 
-if False:
-    tR.ratranRun(r=radius_array.value, rho=density_array.value, temp=temp_array.value, db=0.3,
+# booleans here are for editing immediately before runtime for custom scripts
+if True:
+    skyonly=0
+    tR.ratranRun(r=radius_array.value, rho=density_array.value, temp=temp_array.value, db=3.63,
                  abund=abundance_array, dpc=distance.value, trans=transitions_string, 
-                 molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=0,
+                 molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=skyonly, vr=0, # vr=3.91 if we ever want the radial velocity to be accurate
+                 channels=100, channel_width=0.23,
                  outputfile='h13cn_emission_models/ratranResult_h13cn')
 
 # Ok so this creates DATACUBES. 
@@ -72,6 +75,9 @@ for i, filename in enumerate(list_of_filenames):
     # make this os.system later but we're proofing it first.
     call_fn = os.system
 
+    remove_file_if_exists = 'rm -rf h13cn_miriad_manipulation/h13cn_{0:03d}.sky'.format(J_upper)
+    call_fn(remove_file_if_exists)
+
     convert_fits_to_miriad = 'fits in={0} out=h13cn_miriad_manipulation/h13cn_{1:03d}.sky op=xyin'.format(filename, J_upper)
     call_fn(convert_fits_to_miriad)
 
@@ -89,6 +95,8 @@ fig = plt.figure()
 list_of_spectra = glob.glob("*.spectrum")
 for i, spectrum in enumerate(list_of_spectra):
 
+    print(i, spectrum)
+
     J_upper = transition_list[i]
     freq = frequency_list[i]
 
@@ -99,4 +107,6 @@ for i, spectrum in enumerate(list_of_spectra):
     ax.plot(vel_array, jy_array, linestyle='steps-mid')
 
     plt.show()
+
+
 
