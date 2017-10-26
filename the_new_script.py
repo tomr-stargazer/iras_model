@@ -128,7 +128,7 @@ def prepare_model(abundance, run_ratran=True):
         loaded_array = np.loadtxt(spectrum, skiprows=3)
         index, vel_array, jy_array = loaded_array.T
 
-        model_dict[J_upper] = {'vel': vel_array, 'jy': jy_array}
+        model_dict[J_upper] = {'vel': vel_array, 'jy': jy_array-jy_array[0]}
 
     return model_dict
 
