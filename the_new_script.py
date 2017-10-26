@@ -92,21 +92,21 @@ def prepare_model(abundance, run_ratran=True):
         # make this os.system later but we're proofing it first.
         call_fn = os.system
 
-        remove_file_if_exists = 'rm -rf h13cn_miriad_manipulation/h13cn_{0:03d}.sky'.format(
-            J_upper)
+        miriad_basename = 'h13cn_miriad_manipulation/h13cn_{0:03d}'.format(J_upper)
+
+        remove_file_if_exists = 'rm -rf {0}.sky {0}.convol'.format(miriad_basename)
         call_fn(remove_file_if_exists)
 
-        convert_fits_to_miriad = 'fits in={0} out=h13cn_miriad_manipulation/h13cn_{1:03d}.sky op=xyin'.format(
-            filename, J_upper)
+        convert_fits_to_miriad = 'fits in={0} out={1}.sky op=xyin'.format(filename, 
+                                                                          miriad_basename)
         call_fn(convert_fits_to_miriad)
 
-        put_frequency_in_header = 'puthd in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky/restfreq value={1:.3f}'.format(
-            J_upper, freq.value)
+        put_frequency_in_header = 'puthd in={0}.sky/restfreq value={1:.3f}'.format(miriad_basename, 
+                                                                                   freq.value)
         call_fn(put_frequency_in_header)
 
         # Make a spectrum and output it
-        make_spectrum = 'imspect in=h13cn_miriad_manipulation/h13cn_{0:03d}.sky log=h13cn_miriad_manipulation/h13cn_{0:03d}.spectrum'.format(
-            J_upper, freq.value)
+        make_spectrum = "imspect in={0}.convol region='arcsec,box(0,5,0,5)' log={0}.spectrum".format(miriad_basename)
         call_fn(make_spectrum)
 
     model_dict = OrderedDict()
