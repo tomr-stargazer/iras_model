@@ -105,9 +105,15 @@ def prepare_model(abundance, run_ratran=True):
                                                                                    freq.value)
         call_fn(put_frequency_in_header)
 
+        # Convolve map
+        convolve_map = 'convol map={0}.sky fwhm={1:.2f} out={0}.convol'.format(miriad_basename, 29.1)
+        call_fn(convolve_map)
+
         # Make a spectrum and output it
         make_spectrum = "imspect in={0}.convol region='arcsec,box(0,5,0,5)' log={0}.spectrum".format(miriad_basename)
         call_fn(make_spectrum)
+
+        # pdb.set_trace()
 
     model_dict = OrderedDict()
 
