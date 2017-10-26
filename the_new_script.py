@@ -177,11 +177,11 @@ if True:
         chi2_of_model = np.sum([chisq_line(x['jy'], y['jy'], placeholder_rms)
                                 for x, y in zip(data.values(), models.values())])
 
-        print("\n\n***********************")
-        print("***********************")
-        print("chi2 of {0:.1e}: {1:.3e}".format(abundance, chi2_of_model))
-        print("***********************")
-        print("***********************\n\n")
+        print("\n\n****************************")
+        print("****************************")
+        print("For X(h13cn)={0:.1e}, chi2 = {1:.2e}".format(abundance, chi2_of_model))
+        print("****************************")
+        print("****************************\n\n")
 
         fig = plot_model(models, data_dict=data)
         fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
