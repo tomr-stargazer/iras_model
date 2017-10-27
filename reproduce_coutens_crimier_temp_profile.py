@@ -25,7 +25,6 @@ tstar    = 5000.             # Stellar temperature
 rstar    = lstar**0.5*(tstar/5785.0)**(-2.0)*nc.RS
 rin      = 22 * nc.AU        # Inner radius of shell
 rout     = 6100 * nc.AU      # Outer radius of shell
-# r0       = 76 * nc.AU        # Reference radius (I think this is right?) where T_dust=100K
 rinf     = 1280 * nc.AU      # Radius at which density distribution changes
 #rho0     = 9.0e-16          # Density at reference radius (gas mass). Can be used instead of Menv (need to change code further down)
 menv     = 1.9               # Envelope mass in M_sun
@@ -55,9 +54,6 @@ kappa = tP.findKappa(localdust, o)  ### Find Kappa at 0.55 micron
 
 r = tP.makeRadialGrid(nref, rin, rout, rref, nr)  # Make radial grid
 
-print(r)
-print(len(r))
-
 import astropy.constants as c
 import astropy.units as u
 
@@ -65,10 +61,8 @@ import astropy.units as u
 # ((45*2*c.m_p + 10*4*c.m_p)/(45))/c.m_p
 number_density_to_mass_density_of_H2 = 2.89*c.m_p
 
-n_at_T_dust_100K = 2e8 * u.cm**-3
-rho_at_T_dust_100K = (n_at_T_dust_100K * number_density_to_mass_density_of_H2).to(u.g*u.cm**-3)
-
-n_at_rinf = 2.5e6 * u.cm**-3
+# this value was read off of the Crimier+2010 Figure 3 plot, using WebPlotDigitizer - so quite precise
+n_at_rinf = 2.67e6 * u.cm**-3
 rho_at_rinf = (n_at_rinf * number_density_to_mass_density_of_H2).to(u.g*u.cm**-3)
 
 # print 4.0*math.pi/(3.0+plrho)*rho0*r0**(-plrho)*(rout**(3.0+plrho)-rin**(3.0+plrho))/1.989e33
@@ -76,19 +70,19 @@ rho_at_rinf = (n_at_rinf * number_density_to_mass_density_of_H2).to(u.g*u.cm**-3
 # rho0 = menv/(4.0*math.pi/(3.0+plrho)*r0**(-plrho) *
 #              (rout**(3.0+plrho)-rin**(3.0+plrho))/1.989e33)
 
-# n_r_nought = 
-
 rho = np.zeros_like(r)
 rho[r<=rinf] = rho_at_rinf.value * (rinf/r[r<=rinf])**(-plrho_inner)
 rho[r>=rinf] = rho_at_rinf.value * (rinf/r[r>=rinf])**(-plrho_outer)
 
-print(rho)
+rho_dust = rho/100
+
+number_density = rho / rho_at_rinf
 
 # rho = 1e-2*rho0 * (r/r0)**(plrho)
 #tau    = integrate(rho*kappa,r)
 # print 'Tau = ',tau
 
-model = {"rstar": rstar, "mstar": 1.0, "tstar": tstar, "r": r, "rho": rho, "isrf": isrf, "tbg": tbg, 
+model = {"rstar": rstar, "mstar": 1.0, "tstar": tstar, "r": r, "rho": rho_dust, "isrf": isrf, "tbg": tbg, 
     "freq": o['freq'], "nriter": nriter, "convcrit": convcrit, "ncst": ncst, "ncex": ncex, 
     "ncnr": ncnr, "itypemw": itypemw, "idump": idump}
 tP.writeTransphereInput(model)
