@@ -106,3 +106,23 @@ plt.ylim((1.0e-9, 1.0e3))
 z = {"freq": o['freq'], "spectrum": math.pi *
      astroProcs.bplanck(o['freq'], tstar)*rstar**2/nc.pc**2}
 plotTransphere.plotSpectrum(z, dpc=dist, jy=1, pstyle='g--')
+
+plt.figure(2)
+plt.plot((r*u.cm).to(u.AU), rho)
+plt.xlabel("r (AU)", fontsize=14)
+plt.ylabel("mass density (g cm-3)", fontsize=14)
+plt.loglog()
+
+plt.figure(3)
+plotTransphere.plotTemperature(a, 0, pstyle='r:')
+plotTransphere.plotTemperature(a, 1, pstyle='g:')
+plotTransphere.plotTemperature(a, -1, pstyle='b-')
+plt.plot([76],[100], 'r*')
+
+print("\n\n*************************")
+print("Model Parameters: ")
+print("Luminosity: {:.2f} Lsun".format(lstar))
+print("Tstar: {:.2f} K".format(tstar))
+print("Rstar: {:.2f}".format((rstar*u.cm).to(u.Rsun) ))
+print("Density (r=1280 AU): {:.1e}".format(rho_at_rinf))
+
