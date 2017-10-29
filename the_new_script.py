@@ -23,6 +23,8 @@ import astropy.constants as c
 
 import transphere_python.transphereRatran as tR
 
+import reproduce_coutens_crimier_temp_profile as rcctp
+
 
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
 
@@ -53,11 +55,14 @@ def chisq_line(observed_data, model_data, rms_per_channel, calibration_uncertain
 def prepare_model(abundance, run_ratran=True):
     distance = 120 * u.pc
 
-    rho_nought = 9.0e-16 * u.g * u.cm**-3
-    radius_array = (np.arange(0, 1000, 50)*u.AU).to(u.cm)
-    density_array = (radius_array.to(u.AU)/(1*u.AU))**-1.5 * rho_nought
+    # rho_nought = 9.0e-16 * u.g * u.cm**-3
+    # radius_array = (np.arange(0, 1000, 50)*u.AU).to(u.cm)
+    # density_array = (radius_array.to(u.AU)/(1*u.AU))**-1.5 * rho_nought
 
-    temp_array = np.ones_like(radius_array)*50*u.K
+    # temp_array = np.ones_like(radius_array)*50*u.K
+    radius_array = rcctp.r * u.cm
+    dust_density_array = rcctp.rho_dust * u.g * u.cm**-3
+    temp_array = rcctp.a['temp'][-1] * u.K
     abundance_array = np.ones_like(radius_array.value) * abundance
 
     # pdb.set_trace()
@@ -72,7 +77,7 @@ def prepare_model(abundance, run_ratran=True):
                                  690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
 
     if run_ratran:
-        tR.ratranRun(r=radius_array.value, rho=density_array.value, temp=temp_array.value, db=3.63,
+        tR.ratranRun(r=radius_array.value, rho=dust_density_array.value, temp=temp_array.value, db=3.63,
                      abund=abundance_array, dpc=distance.value, trans=transitions_string,
                      molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=0,
                      channels=100, channel_width=0.23,
