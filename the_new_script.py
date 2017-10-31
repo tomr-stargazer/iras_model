@@ -31,8 +31,55 @@ from load_observed_spectra import retrieve_herschel_spectrum
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
 
 
-def prepare_real_data():
-    pass
+def prepare_real_data(vel_center=0, half_vel_span=12.5):
+    """
+    This produces already smoothed and baselined spectra 
+    which were reduced by a totally separate script.
+
+    It then selects only the inner velocity channels of that data.
+
+    """
+
+    # This bit is just for the Herschel data which start at Ju=6 . We'll have to figure out the IRAM/JCMT sitch separately.
+    fit_results_path = os.path.expanduser("~/Documents/Data/Herschel_Science_Archive/IRAS16293/Fit_results")
+    list_of_files = glob.glob(fit_results_path+"/H13CN*.fits")
+    list_of_spectra = [x for x in list_of_files if 'spectrum.fits' in x]
+
+    rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
+
+    data_dict = OrderedDict()
+
+    for i, Jupper in enumerate(Jupper_list):
+
+        rms = rms_noise_list[i]
+
+        try:
+            spectral_fname = [x for x in list_of_spectra 
+                if 'Ju={:02d}'.format(Jupper) in x][0] # assumes only one match
+        except IndexError:
+            vels = np.linspace(-half_vel_span+vel_center, vel_center+half_vel_span, 50)
+            data_dict[Jupper] = {
+                'vel' : vels,
+                'jy' : np.zeros_like(vels),
+                'rms': 1*u.mK
+            }
+            continue
+
+        # pdb.set_trace()
+
+        spectrum, freqs, vels = retrieve_herschel_spectrum(spectral_fname)
+
+        # Now we want to restrict things to just the spectral region worth considering
+        restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
+        restricted_spectrum = spectrum[np.abs(vels-vel_center) <= half_vel_span]
+
+        data_dict[Jupper] = {
+            'vel': restricted_vels,
+            'jy': restricted_spectrum,
+            'rms': rms
+        }
+
+    return data_dict
 
 
 def prepare_fake_data(vel_array):
@@ -139,7 +186,6 @@ def prepare_model(abundance, run_ratran=True):
 
     return model_dict
 
-
 def plot_model(model_dict, data_dict=None):
 
     fig = plt.figure()
@@ -171,8 +217,24 @@ abundance_grid = np.logspace(-10, -8, 3)
 if True:
     for abundance in abundance_grid:
 
-        models = prepare_model(abundance)
-        data = prepare_fake_data(models[1]['vel'])
+        vel_center=3.91
+
+        # data = prepare_fake_data(models[1]['vel'])
+        data = prepare_real_data(vel_center=vel_center, half_vel_span=12.5)
+
+        models = prepare_model(abundance, run_ratran=True)
+        adapted_models = adapt_models_to_data(models, data)
+
+        # adapted_models = {
+        #     J: {
+        #         'vel': data[J]['vel'],  
+        #         'jy': model_spectrum_interpolated_onto_data(
+        #             data[J]['vel'], models[J]['vel'], models[J]['jy'], 
+        #             velocity_shift=vel_center, channel_width=None)
+        #              } for J in models.keys()}
+
+        pdb.set_trace()
+
         placeholder_rms = 15
 
         for x, y, key in zip(data.values(), models.values(), data.keys()):
