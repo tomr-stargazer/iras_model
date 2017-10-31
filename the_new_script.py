@@ -139,7 +139,7 @@ def prepare_model(abundance, run_ratran=True):
 
     transition_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
     transitions_string = ",".join(str(x) for x in transition_list)
-    frequency_list = u.Quantity([86.3399, 172.6778, 259.0117, 345.3397, 431.6597, 517.9698, 604.2679,
+    frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
                                  690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
 
     if run_ratran:
