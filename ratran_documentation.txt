@@ -1,0 +1,507 @@
+Running Ratran
+
+
+The program consists of two parts: the excitation solver `amc' and the ray tracer `sky'. These take the form of C-shell scripts, which read the input and compile the executables. They are run from the command line:
+
+  prompt> amc amc.inp 
+  prompt> sky sky.inp
+
+If something is wrong with the input keywords or model file (a simple typo is enough!), these scripts tend to end with cryptic error messages ("if: bad number", "set: no such file", etc.).  The scripts have been tested extensively, and if you do get any of these error messages, check the input keywords and model carefully.
+
+amc input    amc details   source model  sky input   sky details   amc output  common problems 
+ 
+
+Example amc.inp
+
+*
+
+source=mysource.mdl
+
+file containing input model (see under Source model)
+
+*
+
+outfile=mysource.pop
+
+file to write output to (will overwrite)
+
+*
+
+molfile=hco+.dat
+
+molecular data file
+
+*
+
+snr=20
+
+requested minimum signal-to-noise (see under Details)
+
+*
+
+nphot=1000
+
+initial number of photons per cell (see under Details)
+
+
+kappa=jena,bare,e5
+
+opacity model + parameters (see under Details)
+
+
+tnorm=100
+
+blackbody temperature [K] of intensity normalization (see under Details)
+
+
+velo=grid
+
+velocity model (see under Details)
+
+
+seed=1971
+
+random number seed
+
+
+minpop=1.e-4
+
+minimum population to include in S/N calculation
+
+
+fixset=1.e-6
+
+convergence requirement for first stage (see under Details)
+
+
+trace=on
+
+write history files to monitor convergence (default=off)
+
+*
+
+go
+
+start calculation
+
+*
+
+c
+
+make new executable for next calculation
+
+
+source=mysource2.mdl
+
+file containing next input model (see under Source model)
+
+
+outfile=mysource2.pop
+
+file to write output to (will overwrite)
+
+
+kappa=
+
+unset kappa (e.g.) keyword
+
+*
+
+go
+
+start calculation
+
+*
+
+k
+
+continue with same executable
+
+
+source=mysource3.mdl
+
+file containing next input model (see under Source model)
+
+
+outfile=mysource3.pop
+
+file to write output to (will overwrite)
+
+*
+
+go
+
+go
+
+*
+
+q
+
+quit
+
+(* = required keyword; others are optional and have good defaults) 
+Keywords that are not re-defined stick to default or previous value. 
+Subsequent calculations will generally need a new executable, indicated with 'c', but if all array sizes are the same in the next run, 'k' can be used.
+
+top    amc details   source model  sky input   sky details   amc output  common problems 
+ 
+
+Details:
+
+snr, nphot: In most cases, a signal-to-noise ratio of 10-20 is sufficient, for which nphot=1000 is appropriate. Lower values of nphot are safe and may be faster or slower, depending on the problem. Higher values of nphot should only be used together with higher values of snr. When the program finishes after the first iteration in the 'random' stage, the value of nphot is too high (unless the problem is completely optically thin or thick).
+
+velo  is either the file name (+path if not in current dir) of a user-provided velocity model (see $RATRAN/velocity/*.f for examples), or 'grid'. 'grid' means that the velocity vectors are read from the 'source' input model.
+
+kappa  is either the file name (+path if not current dir) of a user-provided description of the dust emissivity as function of frequency and position (see $RATRAN/kappa/*.f for examples), or a standard defined model. Default (no kappa defined) is no dust emission/absorption.
+
+Standard models:
+
+         kappa=jena,(bare|thin|thick),(no|e5|e6|e7|e8)
+
+The Ossenkopf & Henning dust models, either 'bare' or with 'thin' or 'thick' ice mantles, and with 'no' coagulation or with 1'e5', 1'e6', 1'e7', or 1'e8' years of growth.
+
+          kappa=powerlaw,NU0,KAPPA0,BETA
+
+A power law emissivity model, kappa=KAPPA0*(nu/NU0)^BETA, where NU0 is in Hz, KAPPA0 in cm2/g_dust, and BETA is the power law index.
+
+tnorm is the blackbody temperature of the normalization used internally for the radiation field. If no value is given, tnorm=t_cmb or 2.735 K. Usually you don't need to provide a value, but at wavelengths shorter than about 15 microns, a high tnorm such that the normalization remains finite in that regime is required (e.g., tnorm=4000.)
+
+fixset is the relative accuracy of the populations after the first stage (with rays fixed). The default value 1e-6 is usually OK; only very opaque problems may need lower values.
+
+top  amc input source model    sky input   sky details  amc output  common problems 
+ 
+
+Input models for amc
+
+The input model starts with a header. '#' signals a comment line. Keywords are given in the format 'rmax='value, in no particular order. 'columns' identifies the columns of the subsequent grid. '@' signals the start of the grid.  For example:
+
+# A simple 1D model with constant conditions 
+  rmax=9.e14 
+  ncell=9 
+  tcmb=2.728 
+  columns=id,ra,rb,nh,nm,tk,db,vr,td 
+  gas:dust=100 
+  @ 
+  1   0.e14   1.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  2   1.e14   2.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  3   2.e14   3.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  4   3.e14   4.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  5   4.e14   5.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  6   5.e14   6.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  7   6.e14   7.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  8   7.e14   8.e14   1.e4   1.e-4   30.   1.  0. 25. 
+  9   8.e14   9.e14   1.e4   1.e-4   30.   1.  0. 25.
+
+  Currently, the code recognizes the following column identifiers, 
+where those marked with *  are required and others are optional: 
+ 
+
+*
+
+id
+
+shell number
+
+*
+
+ra,rb
+
+inner & outer radius (m)
+
+*
+
+za,zb
+
+lower & upper height (m) (2D only)
+
+
+nh
+
+density (cm-3) of main collision partner (usually H2)
+
+
+nm
+
+density (cm-3) of molecule
+
+
+ne
+
+density (cm-3) of second collision partner (e.g. electrons)
+
+
+tk
+
+kinetic temperature (K) 
+
+
+td
+
+dust temperature (K)
+
+
+te
+
+`electron' temperature (K)
+
+
+db
+
+1/e half-width of line profile (Doppler b-parameter) (km s-1)
+
+
+vr
+
+radial velocity (km s-1)
+
+
+vz
+
+vertical velocity (km s-1) (2D only)
+
+
+vr
+
+azimuthal velocity (km s-1) (2D only)
+
+Note: 'rmax' and the `rb' of the outermost cell must have the exact 
+same value, and `ra' of the inner most cell must be 0. Do not leave 
+open spaces anywhere in the model. Specifying both ra and rb is necessary for 
+1D models because the code is set up to deal with 2D models. 
+For a Gaussian line profile, b/FWHM = 1/(2*sqrt(ln(2))) = 0.60
+
+top  amc input  amc details   sky input   sky details  amc output  common problems 
+ 
+
+Example sky.inp
+
+*
+
+source=mysource.pop
+
+input model (see under Details)
+
+
+format=fits
+
+output format (default = miriad)
+
+*
+
+outfile=mysource_sky
+
+base-name for output (FITS: will overwrite existing file)
+
+*
+
+trans=1,3,4
+
+transition numbers (see under Details)
+
+*
+
+pix=128,1.,32,5
+
+number of pixels etc. (see under Details)
+
+*
+
+chan=99,0.1
+
+number of channels and width [in km/s]
+
+*
+
+distance=133.
+
+distance to source [in pc]
+
+*
+
+incl=73.
+
+inclination [degrees] (for 2D; 90=edge-on)
+
+
+fg=my_fg.tab,-2.3
+
+file with table describing foreground
+
+
+central=0.12,800.
+
+central source radius [in arcsec] and blackbody temperature [in K]
+
+
+units=K
+
+output units (see under Details)
+
+
+tnorm=100.
+
+bb temp. of normalization scheme (see under amc details)
+
+*
+
+go
+
+start calculation
+
+*
+
+c
+
+continue with new executable (see under amc input).
+
+
+source=mysource2.pop
+
+
+
+format=miriad
+
+change output format (Miriad: will NOT overwrite existing file)
+
+
+outfile=mysource_sky2
+
+
+
+incl=73.
+
+
+*
+
+go
+
+
+*
+
+k
+
+continue with same executable (see under amc input).
+
+
+source=mysource3.pop
+
+
+
+outfile=mysource_sky3
+
+
+
+incl=33.
+
+
+*
+
+go
+
+
+*
+
+q
+
+quit
+
+(* = required keyword; others are optional and have good defaults) 
+Keywords that are not re-defined stick to default or previous value.
+
+top  amc input  amc details   source model    sky details amc output  common problems 
+ 
+
+Details:
+
+trans: One can do a sky calculation based on amc output, which will generate line images (use the first channel outside the lines for continuum), or based on an amc input model (with the header edited to contain a kappa keyword), and produce pure continuum images. The values of trans are appended to the output base-name, one image for each requested "transition". 
+If the input file has level populations defined, trans contains the transition numbers to be calculated. These are the numbers at the start of lines (10+NLEV) to (10+NLEV+NLIN) in the molecular data file. For linear molecules with singlet sigma ground states without hyperfine structure such as CO, CS and HCO+, trans is equal to Jup. 
+If there are no populations defined in the input model, then a pure continuum calculation is done, and 'trans' contains the frequencies (in Hz).
+
+pix: Defines the number of pixels in the output image, and their size in arcsec. The following two numbers are optional and set the region (in numbers of pixels radius w.r.t. image center) over which to use multiple (5 in the example) lines of sight to get the intensity in one pixel. This is useful for sources with small details which need not be resolved in the image but need to be sampled for a proper answer.
+
+units: Selects the units of the output images. Options
+
+units=K
+
+Kelvin
+
+(good for line images)
+
+units=Jypx
+
+Jy/pixel
+
+(good for continuum images)
+
+units=Wm2Hzsr
+
+W/m2/Hz/sr
+
+(SI units)
+
+fg: file describing an unrelated foreground cloud; second value gives velocity offset in km/s w.r.t. object. The file format is as follows: 
+      1) values for one transition per line, with transitions in same 
+         order as given by trans (all transitions should be included, not 
+         just those indicated by trans) 
+      2) 13 values per line; lower and upper level labels are first two 
+         numbers; dv is 8th value; tau is 10th value; TR is 13th value. 
+      where TR is antenna temperature in K, dv is line fwhm in km/s, and 
+      tau is the opacity of the transition. All other values are meaningless and can be set to zero. 
+For example, for a 5-level linear molecule:
+
+   2   1   0 0 0 0 0 1.500E+00   0 1.237E+00  0 0 4.074E+00 
+   3   2   0 0 0 0 0 1.500E+00   0 3.003E+00  0 0 2.249E+00 
+   4   3   0 0 0 0 0 1.500E+00   0 1.313E+00  0 0 9.020E-01 
+   5   4   0 0 0 0 0 1.500E+00   0 1.654E-01  0 0 2.949E-01
+
+source: As explained under `trans', `source' can be either amc input or output.
+
+top  amc input  amc details   source model    sky input  amc output  common problems 
+ 
+
+Example amc output
+
+
+  #AMC: output file 
+  #AMC: requested snr=2.000E+01 
+  #AMC: minimum snr=1.000E+06 
+  #AMC: 100.0% converged 
+  rmax=9.000E+14 
+  ncell=9 
+  tcmb=2.728E+00 
+  gas:dust=1.000E+02 
+  columns=id,ra,rb,nh,tk,nm,vr,db,td,lp 
+  molfile=/home/yourname/ratran/radat/hco+.dat 
+  velo=/home/yourname/ratran/velocity/vgrid_1d.f 
+  kappa=jena,bare,e5 
+  @ 
+  1 0.      1.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  2 1.0E+14 2.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  3 2.0E+14 3.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  4 3.0E+14 4.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  5 4.0E+14 5.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  6 5.0E+14 6.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  7 6.0E+14 7.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  8 7.0E+14 8.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+  9 8.0E+14 9.0E+14 1.0E+04 3.0E+0 1.0E-09 0. 1.0E+00 1.0E+02 0.51 0.43 ... 
+ 
+
+top  amc input  amc details   source model    sky input  sky details  amc output 
+ 
+
+Common problems
+
+-- The unit of ra and rb should be m, not cm ! 
+-- The line width should be given as the Doppler parameter (1/e half-width): b = 0.60 * FWHM 
+-- If the model file is generated by a computer program, make sure that each cell has rb > ra. Round-off errors can cause zero or negative width. 
+-- Make sure that ra(1)=0 and rb(ncell)=rmax 
+-- Check the integrity of the model by plotting rb, tk, nh, nm, vr, db, ... versus ra.
+-- When using two collision partners, make sure to define n_e and T_e for each cell. The default for both is zero ... 
+-- The second collision partner is not taken into account in calculating dust opacity, nor is it passed on to SKY 
+-- Some compilers trip over the flexible declaration of the array size at the top of subroutine molinit. A fix is to find out which value (maxtemp or maxtemp2) is the largest in your case, and just use that one for the array size.
+
+
+
+Back to the main Ratran page
+
+
