@@ -216,13 +216,24 @@ def prepare_model(abundance, run_ratran=True):
 
         J_upper = transition_list[i]
         freq = frequency_list[i]
+        diameter = diameter_dict[telescope_list[i]]
+        beam_fwhm = (1.22*u.radian * (c.c/freq)/(diameter) ).to(u.arcsec)
 
         loaded_array = np.loadtxt(spectrum, skiprows=3)
         index, vel_array, jy_array = loaded_array.T
 
-        model_dict[J_upper] = {'vel': vel_array, 'jy': jy_array-jy_array[0]}
+        model_dict[J_upper] = {'vel': vel_array, 'flux': jy_array-jy_array[0]}
+
+        # Insert a Jy -> K conversion here.
+
+        fwhm_to_sigma = 1. / (8 * np.log(2))**0.5
+        beam_sigma = beam_fwhm * fwhm_to_sigma
+        omega_B = 2*np.pi * beam_sigma**2
+
+        model_dict[J_upper]['T_mb'] = (model_dict[J_upper]['flux']*u.Jy).to(u.K, equivalencies=u.brightness_temperature(omega_B, freq))
 
     return model_dict
+
 
 def plot_model(model_dict, data_dict=None):
 
@@ -235,11 +246,11 @@ def plot_model(model_dict, data_dict=None):
         ax = fig.add_subplot(3, 3, i+1, sharey=ax0)
 
         model_vels = model_dict[J_upper]['vel']
-        model_fluxes = model_dict[J_upper]['jy']
+        model_fluxes = model_dict[J_upper]['T_mb']
         ax.plot(model_vels, model_fluxes, linestyle='steps-mid', zorder=10)
 
-        ax.text(0.1, 0.75, r"{0}-{1}$".format(J_upper, J_upper-1),
-                transform=ax.transAxes, fontsize=14)
+        # ax.text(0.1, 0.75, r"{0}-{1}$".format(J_upper, J_upper-1),
+        #         transform=ax.transAxes, fontsize=14)
 
         if data_dict is not None:
 
@@ -255,7 +266,7 @@ def plot_model(model_dict, data_dict=None):
 
         ax0 = ax
 
-    plt.suptitle(r"$\rm{{H}}^{{13}}\rm{{CN}}$")
+    # plt.suptitle(r"$\rm{{H}}^{{13}}\rm{{CN}}$")
     plt.show()
     return fig
 
@@ -265,8 +276,11 @@ def adapt_models_to_data(models, data):
     adapted_models = {
         J: {
             'vel': data[J]['vel'],  
-            'jy': model_spectrum_interpolated_onto_data(
-                data[J]['vel'], models[J]['vel'], models[J]['jy'], 
+            'flux': model_spectrum_interpolated_onto_data(
+                data[J]['vel'], models[J]['vel'], models[J]['flux'], 
+                velocity_shift=vel_center, channel_width=None),
+            'T_mb': model_spectrum_interpolated_onto_data(
+                data[J]['vel'], models[J]['vel'], models[J]['T_mb'], 
                 velocity_shift=vel_center, channel_width=None)
                  } for J in models.keys()}
 
@@ -293,22 +307,22 @@ if True:
         # adapted_models = {
         #     J: {
         #         'vel': data[J]['vel'],  
-        #         'jy': model_spectrum_interpolated_onto_data(
-        #             data[J]['vel'], models[J]['vel'], models[J]['jy'], 
+        #         'flux': model_spectrum_interpolated_onto_data(
+        #             data[J]['vel'], models[J]['vel'], models[J]['flux'], 
         #             velocity_shift=vel_center, channel_width=None)
         #              } for J in models.keys()}
 
-        pdb.set_trace()
+        # pdb.set_trace()
 
         placeholder_rms = 15
 
         for x, y, key in zip(data.values(), adapted_models.values(), data.keys()):
 
             print("Jupper={0}".format(key))
-            line_chi2 = chisq_line(x['jy'], y['jy'], placeholder_rms)
+            line_chi2 = chisq_line(x['flux'], y['flux'], placeholder_rms)
             # pdb.set_trace()
 
-        chi2_of_model = np.sum([chisq_line(x['jy'], y['jy'], x['rms'].to(u.K).value)
+        chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'].to(u.K).value)
                                 for x, y in zip(data.values(), adapted_models.values())])
 
         print("\n\n****************************")
@@ -318,6 +332,7 @@ if True:
         print("****************************\n\n")
 
         fig = plot_model(adapted_models, data_dict=data)
+        plt.suptitle("X(h13cn) = {0:.1e}".format(abundance))
         fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
 
         pdb.set_trace()
