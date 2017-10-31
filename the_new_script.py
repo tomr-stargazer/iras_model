@@ -88,7 +88,7 @@ def prepare_fake_data(vel_array):
 
     for Jupper in Jupper_list:
         fake_data_dict[Jupper] = {
-            'vel': vel_array, 'jy': np.zeros_like(vel_array)}
+            'vel': vel_array, 'jy': np.zeros_like(vel_array), 'rms': 1}
 
     return fake_data_dict
 
@@ -99,6 +99,23 @@ def chisq_line(observed_data, model_data, rms_per_channel, calibration_uncertain
     bottom = rms_per_channel**2 + (calibration_uncertainty * observed_data)**2
 
     return np.sum(top/bottom)
+
+
+def model_spectrum_interpolated_onto_data(data_velocity_array, model_velocity_array,
+                                          old_model_spectrum, velocity_shift=0, channel_width=None):
+
+    # To do this better, we'd actually want to convolve the old_model_spectrum 
+    # with the data channel width...
+    if channel_width is not None:
+        kern1d = astropy.convolution.Gaussian1DKernel(channel_width/2.3) # sigma to FWHM conversion factor
+        convolved_model_spectrum = astropy.convolution.convolve(old_model_spectrum, kern1d)
+    else:
+        convolved_model_spectrum = old_model_spectrum
+
+    new_model_spectrum = np.interp(data_velocity_array, model_velocity_array+velocity_shift, 
+                                   convolved_model_spectrum)
+
+    return new_model_spectrum
 
 
 def prepare_model(abundance, run_ratran=True):
@@ -195,22 +212,49 @@ def plot_model(model_dict, data_dict=None):
     for i, J_upper in enumerate(model_dict.keys()):
 
         ax = fig.add_subplot(3, 3, i+1, sharey=ax0)
-        ax.plot(model_dict[J_upper]['vel'], model_dict[
-                J_upper]['jy'], linestyle='steps-mid')
-        if data_dict is not None:
-            ax.plot(data_dict[J_upper]['vel'], data_dict[
-                    J_upper]['jy'], 'r:', linestyle='steps-mid')
 
-        plt.show()
+        model_vels = model_dict[J_upper]['vel']
+        model_fluxes = model_dict[J_upper]['jy']
+        ax.plot(model_vels, model_fluxes, linestyle='steps-mid', zorder=10)
+
+        ax.text(0.1, 0.75, r"{0}-{1}$".format(J_upper, J_upper-1),
+                transform=ax.transAxes, fontsize=14)
+
+        if data_dict is not None:
+
+            data_vels = data_dict[J_upper]['vel']
+            data_fluxes = data_dict[J_upper]['jy']
+
+            ax.plot(data_vels, data_fluxes, 'r:', linestyle='steps-mid', zorder=1)
+
+            if 'rms' in data_dict[J_upper]:
+                rms = data_dict[J_upper]['rms'].to(u.K).value
+                ax.fill_between(data_vels, data_fluxes+rms, data_fluxes-rms, 
+                                color='r', step='mid', alpha=0.1, zorder=-1)
 
         ax0 = ax
 
+    plt.suptitle(r"$\rm{{H}}^{{13}}\rm{{CN}}$")
+    plt.show()
     return fig
+
+
+def adapt_models_to_data(models, data):
+
+    adapted_models = {
+        J: {
+            'vel': data[J]['vel'],  
+            'jy': model_spectrum_interpolated_onto_data(
+                data[J]['vel'], models[J]['vel'], models[J]['jy'], 
+                velocity_shift=vel_center, channel_width=None)
+                 } for J in models.keys()}
+
+    return adapted_models
 
 
 # def compare_model_to_observations(model_dict, obs_dict)
 
-abundance_grid = np.logspace(-10, -8, 3)
+abundance_grid = np.logspace(-12, -10, 3)
 # pdb.set_trace()
 
 # simple model: only one abundance
@@ -237,14 +281,14 @@ if True:
 
         placeholder_rms = 15
 
-        for x, y, key in zip(data.values(), models.values(), data.keys()):
+        for x, y, key in zip(data.values(), adapted_models.values(), data.keys()):
 
             print("Jupper={0}".format(key))
             line_chi2 = chisq_line(x['jy'], y['jy'], placeholder_rms)
             # pdb.set_trace()
 
-        chi2_of_model = np.sum([chisq_line(x['jy'], y['jy'], placeholder_rms)
-                                for x, y in zip(data.values(), models.values())])
+        chi2_of_model = np.sum([chisq_line(x['jy'], y['jy'], x['rms'].to(u.K).value)
+                                for x, y in zip(data.values(), adapted_models.values())])
 
         print("\n\n****************************")
         print("****************************")
@@ -252,7 +296,7 @@ if True:
         print("****************************")
         print("****************************\n\n")
 
-        fig = plot_model(models, data_dict=data)
+        fig = plot_model(adapted_models, data_dict=data)
         fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
 
         pdb.set_trace()
