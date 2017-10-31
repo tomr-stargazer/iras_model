@@ -153,10 +153,16 @@ def prepare_model(abundance, run_ratran=True):
 
     os.makedirs("./h13cn_miriad_manipulation/", exist_ok=True)
 
+    telescope_list = ['IRAM', 'IRAM', "JCMT", "HIFI", "HIFI", "HIFI", "HIFI", "HIFI", "HIFI"]
+    diameter_dict = {'IRAM': 30*u.m, 'JCMT': 15*u.m, 'HIFI': 3.5*u.m}
+
     for i, filename in enumerate(list_of_filenames):
 
         J_upper = transition_list[i]
         freq = frequency_list[i]
+        diameter = diameter_dict[telescope_list[i]]
+
+        beam_fwhm = (1.22*u.radian * (c.c/freq)/(diameter) ).to(u.arcsec)
 
         # pdb.set_trace()
 
@@ -168,8 +174,7 @@ def prepare_model(abundance, run_ratran=True):
         remove_file_if_exists = 'rm -rf {0}.sky {0}.convol'.format(miriad_basename)
         call_fn(remove_file_if_exists)
 
-        convert_fits_to_miriad = 'fits in={0} out={1}.sky op=xyin'.format(filename, 
-                                                                          miriad_basename)
+        convert_fits_to_miriad = 'fits in={0} out={1}.sky op=xyin'.format(filename, miriad_basename)
         call_fn(convert_fits_to_miriad)
 
         put_frequency_in_header = 'puthd in={0}.sky/restfreq value={1:.3f}'.format(miriad_basename, 
@@ -177,7 +182,7 @@ def prepare_model(abundance, run_ratran=True):
         call_fn(put_frequency_in_header)
 
         # Convolve map
-        convolve_map = 'convol map={0}.sky fwhm={1:.2f} out={0}.convol'.format(miriad_basename, 29.1)
+        convolve_map = 'convol map={0}.sky fwhm={1:.2f} out={0}.convol'.format(miriad_basename, beam_fwhm.value)
         call_fn(convolve_map)
 
         # Make a spectrum and output it
