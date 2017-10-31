@@ -46,6 +46,17 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
     list_of_spectra = [x for x in list_of_files if 'spectrum.fits' in x]
 
     rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
+    efficiency_correction_list = [
+        0.95/0.78,
+        0.91/0.54,
+        1/0.5,
+        0.96/0.76,
+        0.96/0.76,
+        0.96/0.75,
+        0.96/0.75,
+        0.96/0.75,
+        0.96/0.74
+    ]
 
     data_dict = OrderedDict()
 
@@ -60,7 +71,8 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
             vels = np.linspace(-half_vel_span+vel_center, vel_center+half_vel_span, 50)
             data_dict[Jupper] = {
                 'vel' : vels,
-                'jy' : np.zeros_like(vels),
+                'flux' : np.zeros_like(vels),
+                'T_mb': np.zeros_like(vels),
                 'rms': 1*u.mK
             }
             continue
@@ -73,9 +85,13 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
         restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
         restricted_spectrum = spectrum[np.abs(vels-vel_center) <= half_vel_span]
 
+        efficiency = efficiency_correction_list[i]
+        corrected_spectrum = restricted_spectrum * efficiency
+
         data_dict[Jupper] = {
             'vel': restricted_vels,
-            'jy': restricted_spectrum,
+            'flux': restricted_spectrum,
+            'T_mb': corrected_spectrum,
             'rms': rms
         }
 
@@ -88,7 +104,7 @@ def prepare_fake_data(vel_array):
 
     for Jupper in Jupper_list:
         fake_data_dict[Jupper] = {
-            'vel': vel_array, 'jy': np.zeros_like(vel_array), 'rms': 1}
+            'vel': vel_array, 'flux': np.zeros_like(vel_array), 'rms': 1}
 
     return fake_data_dict
 
@@ -228,7 +244,7 @@ def plot_model(model_dict, data_dict=None):
         if data_dict is not None:
 
             data_vels = data_dict[J_upper]['vel']
-            data_fluxes = data_dict[J_upper]['jy']
+            data_fluxes = data_dict[J_upper]['T_mb']
 
             ax.plot(data_vels, data_fluxes, 'r:', linestyle='steps-mid', zorder=1)
 
