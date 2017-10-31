@@ -1,10 +1,36 @@
+import os
+import glob
+import pdb
+import matplotlib.pyplot as plt
+
+from reduce_herschel_spectra import read_in_fits_spectrum_from_class
+
+load_a_spectrum = read_in_fits_spectrum_from_class.load_a_spectrum
 
 
-def retrieve_herschel_spectrum():
+def retrieve_herschel_spectrum(filename):
+    """
+    Simply a renaming of `reduce_herschel_spectra.read_in_fits_spectrum_from_class.load_a_spectrum`.
 
-    # We'll figure this out at some point.
+    Parameters
+    ==========
+    filename : str
+        name of FITS file which contains the spectrum.
 
-    pass
+    Returns
+    =======
+    spectrum : np.ndarray; Unit: K
+        Intensity values of spectrum, before any efficiency corrections. 
+    freq_array : np.ndarray; Unit: Hz.
+        Frequency values of `spectrum`.
+    vel_array : np.ndarray; Unit: km/s
+        Velocity values of `spectrum`.
+
+    """
+
+    spectrum, freq_array, vel_array = load_a_spectrum(filename)
+
+    return spectrum, freq_array, vel_array
 
 
 def retrieve_iram_spectrum():
@@ -19,4 +45,33 @@ def retrieve_jcmt_spectrum():
     # ok.
 
     pass
+
+
+
+def demonstration_retrieve_herschel_spectra():
+
+    fig = plt.figure()
+
+    # A little function to retrieve the spectra  - this will outline our approach and tell us which functions we need etc
+
+    # Lots of this is copied from fit_the_lines_script.py in reduce....
+    fit_results_path = os.path.expanduser("~/Documents/Data/Herschel_Science_Archive/IRAS16293/Fit_results")
+    list_of_files = glob.glob(fit_results_path+"/HCN*.fits")
+    list_of_spectra = [x for x in list_of_files if 'spectrum.fits' in x]
+    # Don't need the results so they're not here.
+
+    for i, spectrum_fname in enumerate(list_of_spectra):
+
+        ax = fig.add_subplot(3,4,i+1)
+
+        spectrum_tuple = load_a_spectrum(spectrum_fname)
+        # result_tuple = load_a_spectrum(result_fname)
+
+        ax.plot(spectrum_tuple[2], spectrum_tuple[0], 'k', lw=1, drawstyle='steps-mid')
+        # ax.plot(result_tuple[2], result_tuple[0], 'r', lw=0.75)
+
+        ax.set_xlim(-40, 40)
+        ax.set_ylim(-0.5, 1)
+
+        pdb.set_trace()
 
