@@ -18,12 +18,14 @@ from collections import OrderedDict
 
 import numpy as np
 import matplotlib.pyplot as plt
+import astropy
 import astropy.units as u
 import astropy.constants as c
 
 import transphere_python.transphereRatran as tR
 
 import reproduce_coutens_crimier_temp_profile as rcctp
+from load_observed_spectra import retrieve_herschel_spectrum
 
 
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
