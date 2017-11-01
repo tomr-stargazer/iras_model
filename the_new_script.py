@@ -32,7 +32,6 @@ from load_observed_spectra import retrieve_herschel_spectrum, retrieve_timasss_s
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
 frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
                              690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
-# rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
 efficiency_correction_list = [
     0.95/0.78,
     0.91/0.54,
@@ -51,13 +50,13 @@ hifi_filename_list = [ os.path.join(fit_results_path, 'H13CN_Ju={:02d}_spectrum.
     for Ju in Jupper_list if Ju >= 6]
 filename_list = timasss_filename_list + hifi_filename_list
 
-# soon we should provide all these lists of parameters as 
-def prepare_data_2(vel_center=0, half_vel_span=12.5):
+
+def prepare_data(vel_center=0, half_vel_span=12.5):
     """
-    For each spectral line, this does the following:
-    - Loads the spectrum (flux array and velocity array) from the given file
-    - Extracts the relevant channels around the spectral feature (+/- `half_vel_span`)
-    - Applies an efficiency correction to take antenna temperature to main beam temperature
+    This produces already smoothed and baselined spectra 
+    which were reduced by a totally separate script.
+
+    It then selects only the inner velocity channels of that data.
 
     """
 
@@ -74,6 +73,52 @@ def prepare_data_2(vel_center=0, half_vel_span=12.5):
 
 def prepare_individual_data(J_upper, filename, frequency, efficiency,
                             vel_center=0, half_vel_span=12.5):
+    """
+    For a spectral line, this does the following:
+    - Loads the spectrum (flux array and velocity array) from the given file
+    - Applies an efficiency correction to take antenna temperature to main beam temperature
+    - Calculates the rms noise in the file
+    - Extracts the relevant channels around the spectral feature (+/- `half_vel_span`)
+
+    Parameters
+    ==========
+    J_upper : int
+        Quantum number J of the upper rotational state of the transition.
+    filename : str
+        Filename of the FITS file where the spectrum data is stored.
+        Format differs between TIMASSS data and Herschel data at the moment.
+    frequency : astropy.Quantity (u.GHz)
+        Frequency in GHz (or equivalent Unit) of the line of interest.
+    efficiency : float
+        Conversion factor between observed flux T*_A ("Antenna Temperature")
+        and desired sky brightness T_mb ("Main Beam Temperature"). 
+        Should be greater than one but unlikely to be more than 2-3.
+    vel_center : float, optional (default 0)
+        Central velocity of the source. Channels will be extracted symmetrically around this velocity.
+    half_vel_span : float, optional (default 12.5)
+        How many km/s on each side of `vel_center` to include in the extracted spectrum.
+        Total width will be twice this, i.e., 25 km/s by default.
+
+    Returns
+    =======
+    spectrum_dict : dict
+        Contains the following:
+    'J_upper' : int
+        As in the input parameter.
+    'vel' : np.ndarray
+        Values in km/s of the velocity/spectral dimension of the spectrum. 
+        Truncated to +/- `half_vel_span` km/s around `vel_center`.
+    'T_mb' : np.ndarray
+        The flux values in K of the main beam temperature spectrum.
+        Truncated to +/- `half_vel_span` km/s around `vel_center`.
+    'full_vel' : np.ndarray
+        Un-truncated velocity array.
+    'full_spectrum' : np.ndarray
+        Un-truncated main beam temperature array.
+    'rms' : float
+        RMS noise (K) per channel, empirically calculated from the full input spectrum.
+
+    """
 
     if frequency <= 367 * u.GHz:
         # do the TIMASSS thing
@@ -96,7 +141,6 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
     restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
     restricted_spectrum = corrected_spectrum[np.abs(vels-vel_center) <= half_vel_span]
 
-
     spectrum_dict = {
         'J_upper': J_upper,
         'vel': restricted_vels,
@@ -109,106 +153,8 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
     return spectrum_dict
 
 
-def prepare_real_data(vel_center=0, half_vel_span=12.5):
-    """
-    This produces already smoothed and baselined spectra 
-    which were reduced by a totally separate script.
-
-    It then selects only the inner velocity channels of that data.
-
-    """
-
-    # This bit is just for the Herschel data which start at Ju=6 . We'll have to figure out the IRAM/JCMT sitch separately.
-    fit_results_path = os.path.expanduser("~/Documents/Data/Herschel_Science_Archive/IRAS16293/Fit_results")
-    list_of_files = glob.glob(fit_results_path+"/H13CN*.fits")
-    list_of_spectra = [x for x in list_of_files if 'spectrum.fits' in x]
-
-    frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
-                                 690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
-
-    rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
-    efficiency_correction_list = [
-        0.95/0.78,
-        0.91/0.54,
-        1/0.5,
-        0.96/0.76,
-        0.96/0.76,
-        0.96/0.75,
-        0.96/0.75,
-        0.96/0.75,
-        0.96/0.74
-    ]
-
-    data_dict = OrderedDict()
-
-    for i, Jupper in enumerate(Jupper_list):
-
-        rms = rms_noise_list[i]
-        freq = frequency_list[i]
-
-        # pdb.set_trace()
-
-        try:
-            spectral_fname = [x for x in list_of_spectra 
-                if 'Ju={:02d}'.format(Jupper) in x][0] # assumes only one match
-
-
-            spectrum, freqs, vels = retrieve_herschel_spectrum(spectral_fname)
-
-        except IndexError:
-
-            if Jupper == 1:
-                iram_filename = 'iram13.fits'
-                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
-                vels = vel_array.value
-                spectrum = sp.flux
-
-            elif Jupper == 3:
-                iram_filename = 'iram289.fits'
-                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
-                vels = vel_array.value
-                spectrum = sp.flux
-
-            elif Jupper == 4:
-                iram_filename = 'spect466.fits'
-                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
-                vels = vel_array.value
-                spectrum = sp.flux
-
-            else:
-
-                vels = np.linspace(-half_vel_span+vel_center, vel_center+half_vel_span, 50)
-                data_dict[Jupper] = {
-                    'vel' : vels,
-                    'flux' : np.zeros_like(vels),
-                    'T_mb': np.zeros_like(vels),
-                    'rms': 1*u.mK
-                }
-                continue
-
-        # pdb.set_trace()
-
-
-        # Now we want to restrict things to just the spectral region worth considering
-        restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
-        restricted_spectrum = spectrum[np.abs(vels-vel_center) <= half_vel_span]
-
-        efficiency = efficiency_correction_list[i]
-        corrected_spectrum = restricted_spectrum * efficiency
-
-        data_dict[Jupper] = {
-            'vel': restricted_vels,
-            'flux': restricted_spectrum,
-            'T_mb': corrected_spectrum,
-            'rms': rms
-        }
-
-        # pdb.set_trace()
-
-    return data_dict
-
-
 def prepare_fake_data(vel_array):
+
 
     fake_data_dict = {}
 
@@ -407,7 +353,7 @@ if True:
 
         # data = prepare_fake_data(models[1]['vel'])
         # data = prepare_real_data(vel_center=vel_center, half_vel_span=20)
-        data = prepare_data_2(vel_center=vel_center, half_vel_span=20)
+        data = prepare_data(vel_center=vel_center, half_vel_span=20)
 
         models = prepare_model(abundance, run_ratran=True)
         adapted_models = adapt_models_to_data(models, data)
