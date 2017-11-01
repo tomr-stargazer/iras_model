@@ -3,7 +3,10 @@ import glob
 import pdb
 import matplotlib.pyplot as plt
 
+import astropy.units as u
+
 from reduce_herschel_spectra import read_in_fits_spectrum_from_class
+import pyspeckit
 
 load_a_spectrum = read_in_fits_spectrum_from_class.load_a_spectrum
 
@@ -33,19 +36,32 @@ def retrieve_herschel_spectrum(filename):
     return spectrum, freq_array, vel_array
 
 
-def retrieve_iram_spectrum():
+def retrieve_iram_spectrum(filename, line_frequency, correct_velocity=True):
 
     # also to be figured out.
+    data_location = os.path.expanduser("~/Documents/Data/timasss/")
+    sp = pyspeckit.Spectrum(os.path.join(data_location, filename))
 
-    pass
+    sp.xarr.refX = line_frequency
+
+    my_slice = sp.slice(-25*u.km/u.s, 25*u.km/u.s)
+
+    if correct_velocity:
+        velocity_correction = + (sp.header['VELO-LSR']*u.m/u.s).to(u.km/u.s)
+    else:
+        velocity_correction = 0*u.km/u.s
+
+    velocity_axis = my_slice.xarr.as_unit(u.km/u.s, velocity_convention='radio') + velocity_correction
+
+    return velocity_axis, my_slice
 
 
 def retrieve_jcmt_spectrum():
+    # Fortunately, the IRAM and JCMT spectra are handled identically. So this function isn't needed.
 
     # ok.
 
     pass
-
 
 
 def demonstration_retrieve_herschel_spectra():
