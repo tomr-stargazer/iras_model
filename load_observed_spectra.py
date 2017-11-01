@@ -36,7 +36,7 @@ def retrieve_herschel_spectrum(filename):
     return spectrum, freq_array, vel_array
 
 
-def retrieve_iram_spectrum(filename, line_frequency, correct_velocity=True):
+def retrieve_timasss_spectrum(filename, line_frequency, correct_velocity=True):
 
     # also to be figured out.
     data_location = os.path.expanduser("~/Documents/Data/timasss/")

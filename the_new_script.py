@@ -25,7 +25,7 @@ import astropy.constants as c
 import transphere_python.transphereRatran as tR
 
 import reproduce_coutens_crimier_temp_profile as rcctp
-from load_observed_spectra import retrieve_herschel_spectrum, retrieve_iram_spectrum
+from load_observed_spectra import retrieve_herschel_spectrum, retrieve_timasss_spectrum
 
 # Parameters of the observed data.
 
@@ -77,7 +77,7 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
 
     if frequency <= 367 * u.GHz:
         # do the TIMASSS thing
-        vel_array, sp = retrieve_iram_spectrum(filename, frequency)
+        vel_array, sp = retrieve_timasss_spectrum(filename, frequency)
         vels = vel_array.value
         spectrum = sp.flux
 
@@ -159,19 +159,19 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
 
             if Jupper == 1:
                 iram_filename = 'iram13.fits'
-                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
                 vels = vel_array.value
                 spectrum = sp.flux
 
             elif Jupper == 3:
                 iram_filename = 'iram289.fits'
-                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
                 vels = vel_array.value
                 spectrum = sp.flux
 
             elif Jupper == 4:
                 iram_filename = 'spect466.fits'
-                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vel_array, sp = retrieve_timasss_spectrum(iram_filename, freq)
                 vels = vel_array.value
                 spectrum = sp.flux
 
