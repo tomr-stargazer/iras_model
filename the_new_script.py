@@ -50,6 +50,19 @@ hifi_filename_list = [ os.path.join(fit_results_path, 'H13CN_Ju={:02d}_spectrum.
     for Ju in Jupper_list if Ju >= 6]
 filename_list = timasss_filename_list + hifi_filename_list
 
+diameter_dict = {'IRAM': 30*u.m, 'JCMT': 15*u.m, 'HIFI': 3.5*u.m}
+
+
+def which_telescope(frequency):
+    if (frequency >= 80 * u.GHz) and (frequency <= 285 * u.GHz):
+        return 'IRAM'
+
+    elif frequency <= 369 * u.GHz:
+        return 'JCMT'
+
+    elif frequency >= 480 * u.GHz:
+        return 'HIFI'
+
 
 def prepare_data(vel_center=0, half_vel_span=12.5):
     """
@@ -120,7 +133,7 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
 
     """
 
-    if frequency <= 367 * u.GHz:
+    if frequency <= 369 * u.GHz:
         # do the TIMASSS thing
         vel_array, sp = retrieve_timasss_spectrum(filename, frequency)
         vels = vel_array.value
@@ -154,7 +167,10 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
 
 
 def prepare_fake_data(vel_array):
+    """
+    Possibly obsolete at the moment (since writing `prepare_data`)
 
+    """
 
     fake_data_dict = {}
 
@@ -346,7 +362,7 @@ abundance_grid = np.logspace(-12, -10, 3)
 # pdb.set_trace()
 
 # simple model: only one abundance
-if True:
+if False:
     for abundance in abundance_grid:
 
         vel_center=3.91
@@ -390,3 +406,188 @@ if True:
         fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
 
         pdb.set_trace()
+
+
+
+ratran_output_directory = "./h13cn_emission_models"
+ratran_output_prefix = 'ratranResult_h13cn'
+
+
+def prepare_and_run_ratran_model(abundance):
+    # Currently only for a constant-abundance model
+
+    distance = 120 * u.pc
+    radius_array = rcctp.r * u.cm
+    dust_density_array = rcctp.rho_dust * u.g * u.cm**-3
+    temp_array = rcctp.a['temp'][-1] * u.K
+    abundance_array = np.ones_like(radius_array.value) * abundance
+
+    fwhm_linewidth =  6.06
+    db = 0.6 * fwhm_linewidth
+
+    os.makedirs(ratran_output_directory, exist_ok=True)
+
+    transitions_string = ",".join(str(x) for x in Jupper_list)
+
+    # write some files the way that RATRAN usually does
+
+    tR.ratranRun(r=radius_array.value, rho=dust_density_array.value, temp=temp_array.value, 
+                 db=db, abund=abundance_array, dpc=distance.value, trans=transitions_string,
+                 molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=0,
+                 channels=100, channel_width=0.23,
+                 outputfile=os.path.join(ratran_output_directory, ratran_output_prefix))
+
+    return None
+
+
+miriad_directory = './h13cn_miriad_manipulation'
+miriad_prefix = 'h13cn_'
+
+
+def create_sky_spectra_with_miriad():
+
+    # do it for all of them
+    # create some files
+
+    for i, J_upper in enumerate(Jupper_list):
+
+        freq = frequency_list[i]
+
+        if which_telescope(freq) == 'HIFI':
+            offset_arcsec = 2.5 * u.arcsec
+        else:
+            offset_arcsec = 5 * u.arcsec
+
+        create_individual_spectrum_with_miriad(J_upper, freq, offset_arcsec=offset_arcsec)
+
+    return None    
+
+
+def create_individual_spectrum_with_miriad(J_upper, frequency, offset_arcsec=0*u.arcsec):
+
+    # First, figure out which telescope we're on
+    diameter = diameter_dict[which_telescope(frequency)]
+    beam_fwhm = (1.22*u.radian * (c.c/frequency)/(diameter) ).to(u.arcsec)
+
+    # needs a filename
+    input_filename = os.path.join(
+        ratran_output_directory, ratran_output_prefix+"_{:03d}".format(J_upper)+".fits" )
+
+    miriad_basename = os.path.join(miriad_directory, miriad_prefix)+'{0:03d}'.format(J_upper)
+
+    def call_fn(x):
+        print("*** Executing in shell: ", x)
+        os.system(x)
+    # call_fn = lambda x : os.system
+
+    remove_file_if_exists = 'rm -rf {0}.sky {0}.convol'.format(miriad_basename)
+    call_fn(remove_file_if_exists)
+
+    convert_fits_to_miriad = 'fits in={0} out={1}.sky op=xyin'.format(input_filename, miriad_basename)
+    call_fn(convert_fits_to_miriad)
+
+    put_frequency_in_header = 'puthd in={0}.sky/restfreq value={1:.3f}'.format(miriad_basename, 
+                                                                               frequency.value)
+    call_fn(put_frequency_in_header)
+
+    # Convolve map
+    convolve_map = 'convol map={0}.sky fwhm={1:.2f} out={0}.convol'.format(miriad_basename, beam_fwhm.value)
+    call_fn(convolve_map)
+
+    # Make a spectrum and output it
+    make_spectrum = "imspect in={0}.convol region='arcsec,box(0,{1:.2f},0,{1:.2f})' log={0}.spectrum".format(miriad_basename, offset_arcsec.to(u.arcsec).value)
+    call_fn(make_spectrum)
+
+    return None
+
+
+def load_miriad_spectrum(J_upper):
+
+    miriad_basename = os.path.join(miriad_directory, miriad_prefix)+'{0:03d}'.format(J_upper)
+    spectrum_filename = miriad_basename+".spectrum"
+
+    loaded_array = np.loadtxt(spectrum_filename, skiprows=3)
+    index, vel_array, jy_array = loaded_array.T
+
+    return vel_array, jy_array
+
+
+def convert_Jybm_spectrum_to_K(jy_array, frequency):
+
+    diameter = diameter_dict[which_telescope(frequency)]
+    beam_fwhm = (1.22*u.radian * (c.c/frequency)/(diameter) ).to(u.arcsec)
+
+    fwhm_to_sigma = 1. / (8 * np.log(2))**0.5
+    beam_sigma = beam_fwhm * fwhm_to_sigma
+    omega_B = 2*np.pi * beam_sigma**2
+
+    K_array = (jy_array*u.Jy).to(u.K, equivalencies=u.brightness_temperature(omega_B, frequency))
+
+    return K_array
+
+
+def convert_and_adapt_model_spectra(data_dict, vel_center=0):
+    
+    converted_adapted_model_dict = OrderedDict()
+
+    for i, (Jupper, data_spectrum_dict) in enumerate(zip(Jupper_list, data_dict.values())):
+
+        converted_adapted_model_dict[Jupper] = convert_and_adapt_individual_model(
+            Jupper, frequency_list[i], data_spectrum_dict,
+            vel_center=vel_center)
+
+    return converted_adapted_model_dict
+
+
+def convert_and_adapt_individual_model(J_upper, frequency, data_spectrum_dict, vel_center=0):
+
+    model_vel_array, model_jy_array = load_miriad_spectrum(J_upper)
+
+    model_K_array = convert_Jybm_spectrum_to_K(model_jy_array, frequency)
+
+    new_model_K_array = model_spectrum_interpolated_onto_data(
+        data_spectrum_dict['vel'], model_vel_array, model_K_array, velocity_shift=vel_center)
+
+    model_spectrum_dict = {
+        'J_upper': J_upper,
+        'vel': data_spectrum_dict['vel'],
+        'T_mb': new_model_K_array - new_model_K_array[0]
+    }
+
+    return model_spectrum_dict
+
+
+def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center=0):
+
+    if abundance is not None:
+        prepare_and_run_ratran_model(abundance)
+
+    create_sky_spectra_with_miriad()
+
+    model_dict = convert_and_adapt_model_spectra(data_dict, vel_center=vel_center)
+
+    return model_dict
+
+
+if True:
+
+    vel_center=3.91
+    data = prepare_data(vel_center=vel_center, half_vel_span=20)
+    models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=None)
+
+
+    chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
+                            for x, y in zip(data.values(), models.values())])
+
+    print("\n\n****************************")
+    print("****************************")
+    print("For X(h13cn)={0:.1e}, chi2 = {1:.2e}".format(abundance, chi2_of_model))
+    print("****************************")
+    print("****************************\n\n")
+
+    fig = plot_model(models, data_dict=data)
+    plt.show()
+
+    pdb.set_trace()
+
+
