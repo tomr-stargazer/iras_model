@@ -25,7 +25,7 @@ import astropy.constants as c
 import transphere_python.transphereRatran as tR
 
 import reproduce_coutens_crimier_temp_profile as rcctp
-from load_observed_spectra import retrieve_herschel_spectrum
+from load_observed_spectra import retrieve_herschel_spectrum, retrieve_iram_spectrum
 
 
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
@@ -45,6 +45,9 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
     list_of_files = glob.glob(fit_results_path+"/H13CN*.fits")
     list_of_spectra = [x for x in list_of_files if 'spectrum.fits' in x]
 
+    frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
+                                 690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
+
     rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
     efficiency_correction_list = [
         0.95/0.78,
@@ -63,23 +66,50 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
     for i, Jupper in enumerate(Jupper_list):
 
         rms = rms_noise_list[i]
+        freq = frequency_list[i]
+
+        # pdb.set_trace()
 
         try:
             spectral_fname = [x for x in list_of_spectra 
                 if 'Ju={:02d}'.format(Jupper) in x][0] # assumes only one match
+
+
+            spectrum, freqs, vels = retrieve_herschel_spectrum(spectral_fname)
+
         except IndexError:
-            vels = np.linspace(-half_vel_span+vel_center, vel_center+half_vel_span, 50)
-            data_dict[Jupper] = {
-                'vel' : vels,
-                'flux' : np.zeros_like(vels),
-                'T_mb': np.zeros_like(vels),
-                'rms': 1*u.mK
-            }
-            continue
+
+            if Jupper == 1:
+                iram_filename = 'iram13.fits'
+                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vels = vel_array.value
+                spectrum = sp.flux
+
+            elif Jupper == 3:
+                iram_filename = 'iram289.fits'
+                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vels = vel_array.value
+                spectrum = sp.flux
+
+            elif Jupper == 4:
+                iram_filename = 'spect466.fits'
+                vel_array, sp = retrieve_iram_spectrum(iram_filename, freq)
+                vels = vel_array.value
+                spectrum = sp.flux
+
+            else:
+
+                vels = np.linspace(-half_vel_span+vel_center, vel_center+half_vel_span, 50)
+                data_dict[Jupper] = {
+                    'vel' : vels,
+                    'flux' : np.zeros_like(vels),
+                    'T_mb': np.zeros_like(vels),
+                    'rms': 1*u.mK
+                }
+                continue
 
         # pdb.set_trace()
 
-        spectrum, freqs, vels = retrieve_herschel_spectrum(spectral_fname)
 
         # Now we want to restrict things to just the spectral region worth considering
         restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
@@ -94,6 +124,8 @@ def prepare_real_data(vel_center=0, half_vel_span=12.5):
             'T_mb': corrected_spectrum,
             'rms': rms
         }
+
+        # pdb.set_trace()
 
     return data_dict
 
