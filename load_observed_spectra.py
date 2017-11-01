@@ -54,14 +54,6 @@ def retrieve_timasss_spectrum(filename, line_frequency, correct_velocity=True):
     return velocity_axis, sp
 
 
-def retrieve_jcmt_spectrum():
-    # Fortunately, the IRAM and JCMT spectra are handled identically. So this function isn't needed.
-
-    # ok.
-
-    pass
-
-
 def demonstration_retrieve_herschel_spectra():
 
     fig = plt.figure()
