@@ -44,16 +44,14 @@ def retrieve_iram_spectrum(filename, line_frequency, correct_velocity=True):
 
     sp.xarr.refX = line_frequency
 
-    my_slice = sp.slice(-25*u.km/u.s, 25*u.km/u.s)
-
     if correct_velocity:
         velocity_correction = + (sp.header['VELO-LSR']*u.m/u.s).to(u.km/u.s)
     else:
         velocity_correction = 0*u.km/u.s
 
-    velocity_axis = my_slice.xarr.as_unit(u.km/u.s, velocity_convention='radio') + velocity_correction
+    velocity_axis = sp.xarr.as_unit(u.km/u.s, velocity_convention='radio') + velocity_correction
 
-    return velocity_axis, my_slice
+    return velocity_axis, sp
 
 
 def retrieve_jcmt_spectrum():
