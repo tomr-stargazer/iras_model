@@ -328,7 +328,7 @@ if True:
         vel_center=3.91
 
         # data = prepare_fake_data(models[1]['vel'])
-        data = prepare_real_data(vel_center=vel_center, half_vel_span=12.5)
+        data = prepare_real_data(vel_center=vel_center, half_vel_span=20)
 
         models = prepare_model(abundance, run_ratran=True)
         adapted_models = adapt_models_to_data(models, data)
