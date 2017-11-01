@@ -27,8 +27,86 @@ import transphere_python.transphereRatran as tR
 import reproduce_coutens_crimier_temp_profile as rcctp
 from load_observed_spectra import retrieve_herschel_spectrum, retrieve_iram_spectrum
 
+# Parameters of the observed data.
 
 Jupper_list = [1, 3, 4, 6, 7, 8, 9, 10, 11]
+frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
+                             690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
+# rms_noise_list = u.Quantity([14, 23, 63, 9, 9, 18, 22, 20, 31], u.mK)
+efficiency_correction_list = [
+    0.95/0.78,
+    0.91/0.54,
+    1/0.5,
+    0.96/0.76,
+    0.96/0.76,
+    0.96/0.75,
+    0.96/0.75,
+    0.96/0.75,
+    0.96/0.74
+]
+
+timasss_filename_list = ['iram13.fits', 'iram289.fits', 'spect466.fits']
+fit_results_path = os.path.expanduser("~/Documents/Data/Herschel_Science_Archive/IRAS16293/Fit_results")
+hifi_filename_list = [ os.path.join(fit_results_path, 'H13CN_Ju={:02d}_spectrum.fits'.format(Ju))
+    for Ju in Jupper_list if Ju >= 6]
+filename_list = timasss_filename_list + hifi_filename_list
+
+# soon we should provide all these lists of parameters as 
+def prepare_data_2(vel_center=0, half_vel_span=12.5):
+    """
+    For each spectral line, this does the following:
+    - Loads the spectrum (flux array and velocity array) from the given file
+    - Extracts the relevant channels around the spectral feature (+/- `half_vel_span`)
+    - Applies an efficiency correction to take antenna temperature to main beam temperature
+
+    """
+
+    data_dict = OrderedDict()
+
+    for i, Jupper in enumerate(Jupper_list):
+
+        data_dict[Jupper] = prepare_individual_data(
+            Jupper, filename_list[i], frequency_list[i], efficiency_correction_list[i],
+            vel_center=vel_center, half_vel_span=half_vel_span)
+
+    return data_dict
+
+
+def prepare_individual_data(J_upper, filename, frequency, efficiency,
+                            vel_center=0, half_vel_span=12.5):
+
+    if frequency <= 367 * u.GHz:
+        # do the TIMASSS thing
+        vel_array, sp = retrieve_iram_spectrum(filename, frequency)
+        vels = vel_array.value
+        spectrum = sp.flux
+
+    elif frequency >= 480 * u.GHz:
+        # do the Herschel thing
+        spectrum, freqs, vels = retrieve_herschel_spectrum(filename)
+
+    # apply efficiencies
+    corrected_spectrum = spectrum * efficiency
+
+    # find the noise. Median absolute deviation means we don't have to mask out the lines.
+    rms_noise = astropy.stats.mad_std(corrected_spectrum)
+
+    # trim some channels
+    # Now we want to restrict things to just the spectral region worth considering
+    restricted_vels = vels[np.abs(vels-vel_center) <= half_vel_span]
+    restricted_spectrum = corrected_spectrum[np.abs(vels-vel_center) <= half_vel_span]
+
+
+    spectrum_dict = {
+        'J_upper': J_upper,
+        'vel': restricted_vels,
+        'T_mb': restricted_spectrum,
+        'full_vel': vels,
+        'full_spectrum': corrected_spectrum,
+        'rms': rms_noise
+    }
+
+    return spectrum_dict
 
 
 def prepare_real_data(vel_center=0, half_vel_span=12.5):
@@ -290,7 +368,7 @@ def plot_model(model_dict, data_dict=None):
             ax.plot(data_vels, data_fluxes, 'r:', linestyle='steps-mid', zorder=1)
 
             if 'rms' in data_dict[J_upper]:
-                rms = data_dict[J_upper]['rms'].to(u.K).value
+                rms = data_dict[J_upper]['rms']
                 ax.fill_between(data_vels, data_fluxes+rms, data_fluxes-rms, 
                                 color='r', step='mid', alpha=0.1, zorder=-1)
 
@@ -328,7 +406,8 @@ if True:
         vel_center=3.91
 
         # data = prepare_fake_data(models[1]['vel'])
-        data = prepare_real_data(vel_center=vel_center, half_vel_span=20)
+        # data = prepare_real_data(vel_center=vel_center, half_vel_span=20)
+        data = prepare_data_2(vel_center=vel_center, half_vel_span=20)
 
         models = prepare_model(abundance, run_ratran=True)
         adapted_models = adapt_models_to_data(models, data)
@@ -343,15 +422,15 @@ if True:
 
         # pdb.set_trace()
 
-        placeholder_rms = 15
+        # placeholder_rms = 15
 
         for x, y, key in zip(data.values(), adapted_models.values(), data.keys()):
 
             print("Jupper={0}".format(key))
-            line_chi2 = chisq_line(x['flux'], y['flux'], placeholder_rms)
+            line_chi2 = chisq_line(x['T_mb'], y['T_mb'], x['rms'])
             # pdb.set_trace()
 
-        chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'].to(u.K).value)
+        chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
                                 for x, y in zip(data.values(), adapted_models.values())])
 
         print("\n\n****************************")
