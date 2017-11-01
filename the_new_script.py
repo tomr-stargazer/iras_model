@@ -501,6 +501,14 @@ def create_individual_spectrum_with_miriad(J_upper, frequency, offset_arcsec=0*u
     return None
 
 
+#### 
+# I probably chunked the python manipulation into too many named functions. 
+# PROBABLY I should have just made `convert_and_adapt_individual_model` 
+# an individual function. 
+# We'll see. If I end up splitting off any of this stuff into a separate module
+# that may help.
+###
+
 def load_miriad_spectrum(J_upper):
 
     miriad_basename = os.path.join(miriad_directory, miriad_prefix)+'{0:03d}'.format(J_upper)
