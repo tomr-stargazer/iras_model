@@ -358,7 +358,7 @@ def adapt_models_to_data(models, data):
 
 # def compare_model_to_observations(model_dict, obs_dict)
 
-abundance_grid = np.logspace(-12, -10, 3)
+abundance_grid = np.logspace(-12, -10, 6)
 # pdb.set_trace()
 
 # simple model: only one abundance
@@ -579,23 +579,25 @@ def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center
 
 if True:
 
-    vel_center=3.91
-    data = prepare_data(vel_center=vel_center, half_vel_span=20)
-    models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=None)
+    for abundance in abundance_grid:
 
+        vel_center=3.91
+        data = prepare_data(vel_center=vel_center, half_vel_span=20)
+        models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=abundance)
 
-    chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
-                            for x, y in zip(data.values(), models.values())])
+        chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
+                                for x, y in zip(data.values(), models.values())])
 
-    print("\n\n****************************")
-    print("****************************")
-    print("For X(h13cn)={0:.1e}, chi2 = {1:.2e}".format(abundance, chi2_of_model))
-    print("****************************")
-    print("****************************\n\n")
+        print("\n\n****************************")
+        print("****************************")
+        print("For X(h13cn)={0:.1e}, chi2 = {1:.2e}".format(abundance, chi2_of_model))
+        print("****************************")
+        print("****************************\n\n")
 
-    fig = plot_model(models, data_dict=data)
-    plt.show()
+        fig = plot_model(models, data_dict=data)
+        plt.suptitle("X(h13cn) = {0:.1e}".format(abundance))
+        fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
+        plt.show()
 
-    pdb.set_trace()
-
+        pdb.set_trace()
 
