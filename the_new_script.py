@@ -271,11 +271,9 @@ def plot_model(model_dict, data_dict=None):
 
     fig = plt.figure()
 
-    ax0 = None
-
     for i, J_upper in enumerate(model_dict.keys()):
 
-        ax = fig.add_subplot(3, 3, i+1, sharey=ax0)
+        ax = fig.add_subplot(3, 3, i+1)
 
         model_vels = model_dict[J_upper]['vel']
         model_fluxes = model_dict[J_upper]['T_mb']
@@ -296,7 +294,6 @@ def plot_model(model_dict, data_dict=None):
                 ax.fill_between(data_vels, data_fluxes+rms, data_fluxes-rms, 
                                 color='r', step='mid', alpha=0.1, zorder=-1)
 
-        ax0 = ax
 
     # plt.suptitle(r"$\rm{{H}}^{{13}}\rm{{CN}}$")
     plt.show()
