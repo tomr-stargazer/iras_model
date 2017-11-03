@@ -539,6 +539,38 @@ def convert_Jybm_spectrum_to_K(jy_array, frequency):
     return K_array
 
 
+# def deserves to be its own fn here...
+def fake_hyperfine_structure(vel_array, flux_array, reverse=False):
+
+    if not np.all(np.diff(vel_array) > 0) or reverse:
+        reverse=True
+        # reverse both arrays
+        vel_array = vel_array[::-1]
+        flux_array = flux_array[::-1]
+
+    center_velocity = -1.1805
+    right_velocity = 3.681
+    left_velocity = -8.472
+
+    center_factor = 5
+    right_factor = 3
+    left_factor = 1
+
+    # effectively this is 1/8 * flux_array
+    base_flux = 1/(center_factor+left_factor+right_factor) * flux_array
+
+    center_flux = np.interp(vel_array, vel_array+center_velocity, center_factor * base_flux)
+    right_flux = np.interp(vel_array, vel_array+right_velocity, right_factor * base_flux)
+    left_flux = np.interp(vel_array, vel_array+left_velocity, left_factor * base_flux)
+
+    hyperfine_flux_array = center_flux + right_flux + left_flux
+
+    if reverse:
+        hyperfine_flux_array = hyperfine_flux_array[::-1]
+
+    return hyperfine_flux_array
+
+
 def convert_and_adapt_model_spectra(data_dict, vel_center=0):
     
     converted_adapted_model_dict = OrderedDict()
@@ -557,6 +589,9 @@ def convert_and_adapt_individual_model(J_upper, frequency, data_spectrum_dict, v
     model_vel_array, model_jy_array = load_miriad_spectrum(J_upper)
 
     model_K_array = convert_Jybm_spectrum_to_K(model_jy_array, frequency)
+
+    if J_upper == 1:
+        model_K_array = fake_hyperfine_structure(model_vel_array, model_K_array.value)*model_K_array.unit
 
     new_model_K_array = model_spectrum_interpolated_onto_data(
         data_spectrum_dict['vel'], model_vel_array, model_K_array, velocity_shift=vel_center)
