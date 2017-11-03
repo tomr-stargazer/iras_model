@@ -413,14 +413,19 @@ ratran_output_directory = "./h13cn_emission_models"
 ratran_output_prefix = 'ratranResult_h13cn'
 
 
-def prepare_and_run_ratran_model(abundance):
-    # Currently only for a constant-abundance model
+def prepare_and_run_ratran_model(X_in, X_out, db=None):
+
+    temperature_jump = 100 * u.K
 
     distance = 120 * u.pc
     radius_array = rcctp.r * u.cm
     dust_density_array = rcctp.rho_dust * u.g * u.cm**-3
     temp_array = rcctp.a['temp'][-1] * u.K
-    abundance_array = np.ones_like(radius_array.value) * abundance
+    abundance_array = np.zeros_like(radius_array.value)
+
+    # Here's the jump abundance magic
+    abundance_array[temp_array >= temperature_jump] = X_in
+    abundance_array[temp_array < temperature_jump] = X_out
 
     fwhm_linewidth =  6.06
     db = 0.6 * fwhm_linewidth
@@ -565,10 +570,10 @@ def convert_and_adapt_individual_model(J_upper, frequency, data_spectrum_dict, v
     return model_spectrum_dict
 
 
-def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center=0):
+def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center=0, db=None):
 
     if abundance is not None:
-        prepare_and_run_ratran_model(abundance)
+        prepare_and_run_ratran_model(*abundance, db)
 
     create_sky_spectra_with_miriad()
 
