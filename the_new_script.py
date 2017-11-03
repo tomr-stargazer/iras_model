@@ -427,8 +427,9 @@ def prepare_and_run_ratran_model(X_in, X_out, db=None):
     abundance_array[temp_array >= temperature_jump] = X_in
     abundance_array[temp_array < temperature_jump] = X_out
 
-    fwhm_linewidth =  6.06
-    db = 0.6 * fwhm_linewidth
+    if db is None:
+        fwhm_linewidth =  6.06
+        db = 0.6 * fwhm_linewidth
 
     os.makedirs(ratran_output_directory, exist_ok=True)
 
@@ -616,28 +617,61 @@ def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center
 
     return model_dict
 
+fwhm_linewidth =  6.06
+db = 0.6 * fwhm_linewidth
 
-if True:
+inner_abundances = np.logspace(-9.5, -7.5, 10)
+outer_abundances = np.logspace(-11, -10, 5)
+# inner_abundances = [3.16e-9]
+# outer_abundances = [1e-11, 5e-11]
+db_values = np.linspace(db/3, db, 4)
 
-    for abundance in abundance_grid:
+chisq_grid = np.zeros((len(inner_abundances), len(outer_abundances), len(db_values)))
 
-        vel_center=3.91
-        data = prepare_data(vel_center=vel_center, half_vel_span=20)
-        models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=abundance)
 
-        chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
-                                for x, y in zip(data.values(), models.values())])
+if False:
 
-        print("\n\n****************************")
-        print("****************************")
-        print("For X(h13cn)={0:.1e}, chi2 = {1:.2e}".format(abundance, chi2_of_model))
-        print("****************************")
-        print("****************************\n\n")
+    for i, X_in in enumerate(inner_abundances):
+        for j, X_out in enumerate(outer_abundances):
+            for k, db_val in enumerate(db_values):
 
-        fig = plot_model(models, data_dict=data)
-        plt.suptitle("X(h13cn) = {0:.1e}".format(abundance))
-        fig.savefig("test_plots/X={0:.1e}.png".format(abundance))
-        plt.show()
+                vel_center=3.91
+                data = prepare_data(vel_center=vel_center, half_vel_span=20)
+                models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=(X_in, X_out), db=db_val)
 
-        pdb.set_trace()
+                chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
+                                        for x, y in zip(data.values(), models.values())])
 
+                print("\n\n****************************")
+                print("****************************")
+                print("For X(h13cn)_in={0:.1e} | X(h13cn)_out={1:.1e} | db={2:.2f}, chi2 = {3:.2e}".format(X_in, X_out, db_val, chi2_of_model))
+                print("****************************")
+                print("****************************\n\n")
+
+                chisq_grid[i,j,k] = chi2_of_model
+
+                fig = plot_model(models, data_dict=data)
+                plt.suptitle("X(h13cn)in = {0:.1e} | X(h13cn)out = {1:.1e} | db={2:.2f}".format(X_in, X_out, db_val))
+                fig.savefig("chisq_test_plots/Xin={0:.1e}_Xout={1:.1e}_db={2:.2f}.png".format(X_in, X_out, db_val))
+            # plt.show()
+
+            # pdb.set_trace()
+
+
+plt.show()
+
+plt.figure()
+plt.imshow(np.squeeze(chisq_grid), extent=(db_values.min(), db_values.max(), outer_abundances.min(), outer_abundances.max() ))
+plt.xlabel("DB")
+plt.ylabel("Xout")
+cb = plt.colorbar()
+cb.set_label("chi squared")
+
+# don't save the outputs when they're just default zeroes.
+if not np.all(chisq_grid==0):
+    np.save("chisq", chisq_grid)
+    np.save("db_vals", db_vals)
+    np.save("Xin", inner_abundances)
+    np.save("Xout", outer_abundances)
+
+print(chisq_grid)
