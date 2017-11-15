@@ -413,9 +413,7 @@ ratran_output_directory = "./h13cn_emission_models"
 ratran_output_prefix = 'ratranResult_h13cn'
 
 
-def prepare_and_run_ratran_model(X_in, X_out, db=None):
-
-    temperature_jump = 100 * u.K
+def prepare_and_run_ratran_model(X_in, X_out, db=None, temperature_jump=100*u.K):
 
     distance = 120 * u.pc
     radius_array = rcctp.r * u.cm
@@ -606,10 +604,11 @@ def convert_and_adapt_individual_model(J_upper, frequency, data_spectrum_dict, v
     return model_spectrum_dict
 
 
-def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center=0, db=None):
+def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center=0, db=None,
+                                           temperature_jump=100*u.K):
 
     if abundance is not None:
-        prepare_and_run_ratran_model(*abundance, db)
+        prepare_and_run_ratran_model(*abundance, db, temperature_jump=temperature_jump)
 
     create_sky_spectra_with_miriad()
 
@@ -629,15 +628,23 @@ db_values = np.linspace(db/3, db, 4)
 chisq_grid = np.zeros((len(inner_abundances), len(outer_abundances), len(db_values)))
 
 
-if False:
+if True:
 
-    for i, X_in in enumerate(inner_abundances):
-        for j, X_out in enumerate(outer_abundances):
-            for k, db_val in enumerate(db_values):
+                X_in = 6e-10
+                X_out = 1.8e-11
+                db_val = 3.2
+
+    # for i, X_in in enumerate(inner_abundances):
+    #     for j, X_out in enumerate(outer_abundances):
+    #         for k, db_val in enumerate(db_values):
+
+                temperature_jump = 60*u.K
 
                 vel_center=3.91
                 data = prepare_data(vel_center=vel_center, half_vel_span=20)
-                models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, abundance=(X_in, X_out), db=db_val)
+                models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, 
+                                                                abundance=(X_in, X_out), db=db_val, 
+                                                                temperature_jump=temperature_jump)
 
                 chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
                                         for x, y in zip(data.values(), models.values())])
@@ -648,11 +655,15 @@ if False:
                 print("****************************")
                 print("****************************\n\n")
 
-                chisq_grid[i,j,k] = chi2_of_model
+                # chisq_grid[i,j,k] = chi2_of_model
 
                 fig = plot_model(models, data_dict=data)
-                plt.suptitle("X(h13cn)in = {0:.1e} | X(h13cn)out = {1:.1e} | db={2:.2f}".format(X_in, X_out, db_val))
-                fig.savefig("chisq_test_plots/Xin={0:.1e}_Xout={1:.1e}_db={2:.2f}.png".format(X_in, X_out, db_val))
+                plt.suptitle(
+                    "X(h13cn)in = {0:.1e} | X(h13cn)out = {1:.1e} | db={2:.2f} | Tj={3:.1f}".format(
+                        X_in, X_out, db_val, temperature_jump))
+                fig.savefig(
+                    "test_plots/Xin={0:.1e}_Xout={1:.1e}_db={2:.2f}.png".format(
+                        X_in, X_out, db_val))
             # plt.show()
 
             # pdb.set_trace()
@@ -660,18 +671,19 @@ if False:
 
 plt.show()
 
-plt.figure()
-plt.imshow(np.squeeze(chisq_grid), extent=(db_values.min(), db_values.max(), outer_abundances.min(), outer_abundances.max() ))
-plt.xlabel("DB")
-plt.ylabel("Xout")
-cb = plt.colorbar()
-cb.set_label("chi squared")
+if False:
+    plt.figure()
+    plt.imshow(np.squeeze(chisq_grid), extent=(db_values.min(), db_values.max(), outer_abundances.min(), outer_abundances.max() ))
+    plt.xlabel("DB")
+    plt.ylabel("Xout")
+    cb = plt.colorbar()
+    cb.set_label("chi squared")
 
-# don't save the outputs when they're just default zeroes.
-if not np.all(chisq_grid==0):
-    np.save("chisq", chisq_grid)
-    np.save("db_vals", db_vals)
-    np.save("Xin", inner_abundances)
-    np.save("Xout", outer_abundances)
+    # don't save the outputs when they're just default zeroes.
+    if not np.all(chisq_grid==0):
+        np.save("chisq", chisq_grid)
+        np.save("db_vals", db_vals)
+        np.save("Xin", inner_abundances)
+        np.save("Xout", outer_abundances)
 
-print(chisq_grid)
+    print(chisq_grid)
