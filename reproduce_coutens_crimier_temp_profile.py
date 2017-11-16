@@ -36,9 +36,9 @@ tbg      = -1                # Spectral shape of ISRF (Blackbody equivalent temp
 
 ### Parameters related to control of code
 
-nr       = 30                # Nr of radial shells for grid
-nref     = nr//2             # Nr of refinement points
-rref     = 150. * nc.AU       # Refinement radius
+nr       = 25                # Nr of radial shells for grid
+nref     = nr - 10           # Nr of refinement points
+rref     = 360. * nc.AU      # Refinement radius
 nriter   = 30                # Maximum nr of iterations
 convcrit = 0.00001           # Convergence criterion
 ncst     = 10                # Nr of rays for star
