@@ -426,8 +426,13 @@ def prepare_and_run_ratran_model(X_in, X_out, db=None, temperature_jump=100*u.K)
     abundance_array[temp_array < temperature_jump] = X_out
 
     if db is None:
-        fwhm_linewidth =  6.06
+        fwhm_linewidth =  2.91
         db = 0.6 * fwhm_linewidth
+
+    stellar_mass = 1*u.Msun
+
+    velocity_array = (( 2*c.G * stellar_mass / radius_array )**(0.5)).to(u.km/u.s)
+    velocity_array[radius_array > 1280*u.AU] = 0
 
     os.makedirs(ratran_output_directory, exist_ok=True)
 
@@ -436,6 +441,7 @@ def prepare_and_run_ratran_model(X_in, X_out, db=None, temperature_jump=100*u.K)
     # write some files the way that RATRAN usually does
 
     tR.ratranRun(r=radius_array.value, rho=dust_density_array.value, temp=temp_array.value, 
+                 vr=velocity_array.value,
                  db=db, abund=abundance_array, dpc=distance.value, trans=transitions_string,
                  molfile='h13cn.dat', unit='jypx', writeonly=0, skyonly=0,
                  channels=100, channel_width=0.23,
@@ -608,7 +614,7 @@ def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center
                                            temperature_jump=100*u.K):
 
     if abundance is not None:
-        prepare_and_run_ratran_model(*abundance, db, temperature_jump=temperature_jump)
+        prepare_and_run_ratran_model(*abundance, db=db, temperature_jump=temperature_jump)
 
     create_sky_spectra_with_miriad()
 
@@ -643,7 +649,7 @@ if True:
                 vel_center=3.91
                 data = prepare_data(vel_center=vel_center, half_vel_span=20)
                 models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, 
-                                                                abundance=(X_in, X_out), db=db_val, 
+                                                                abundance=(X_in, X_out), db=None, 
                                                                 temperature_jump=temperature_jump)
 
                 chi2_of_model = np.sum([chisq_line(x['T_mb'], y['T_mb'], x['rms'])
