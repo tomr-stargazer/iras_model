@@ -14,6 +14,7 @@ Script which:
 import os
 import glob
 import pdb
+import datetime
 from collections import OrderedDict
 
 import numpy as np
@@ -625,26 +626,39 @@ def run_convolve_and_prepare_model_spectra(data_dict, abundance=None, vel_center
 fwhm_linewidth =  6.06
 db = 0.6 * fwhm_linewidth
 
-inner_abundances = np.logspace(-9.5, -7.5, 10)
-outer_abundances = np.logspace(-11, -10, 5)
+inner_abundances = np.logspace(-9.5, -7.5, 1)
+outer_abundances = np.logspace(-11, -10, 1)
 # inner_abundances = [3.16e-9]
 # outer_abundances = [1e-11, 5e-11]
-db_values = np.linspace(db/3, db, 4)
+Tj_values = np.linspace(40, 100, 2)*u.K
 
-chisq_grid = np.zeros((len(inner_abundances), len(outer_abundances), len(db_values)))
+chisq_grid = np.zeros((len(inner_abundances), len(outer_abundances), len(Tj_values)))
 
+typical_elapsed_time = datetime.timedelta(minutes=1, seconds=15)
 
-if True:
+if True and __name__ == "__main__":
 
-                X_in = 6e-10
-                X_out = 1.8e-11
-                db_val = 3.2
+    beginning = datetime.datetime.now()
+    beginning_string = datetime.datetime.strftime(beginning,"%Y-%m-%d %H:%M:%S")
+    print("\n ** Beginning at: {0}".format(beginning_string))
 
-    # for i, X_in in enumerate(inner_abundances):
-    #     for j, X_out in enumerate(outer_abundances):
-    #         for k, db_val in enumerate(db_values):
+    n = chisq_grid.flatten().shape
 
-                temperature_jump = 60*u.K
+    expected_end_time = beginning + typical_elapsed_time*n[0]
+    expected_end_time_string = datetime.datetime.strftime(expected_end_time, "%Y-%m-%d %H:%M:%S")
+    print("\n ** Expected elapsed time: {0}".format(typical_elapsed_time*n[0]))
+    print("\n ** Expected end time: {0}".format(expected_end_time_string))
+
+    pdb.set_trace()
+
+    for i, X_in in enumerate(inner_abundances):
+        for j, X_out in enumerate(outer_abundances):
+            for k, temperature_jump in enumerate(Tj_values):
+
+                # X_in = 0.5e-9
+                # X_out = 1e-11
+                # db_val = 1.746
+                # temperature_jump = 50*u.K
 
                 vel_center=3.91
                 data = prepare_data(vel_center=vel_center, half_vel_span=20)
@@ -657,27 +671,54 @@ if True:
 
                 print("\n\n****************************")
                 print("****************************")
-                print("For X(h13cn)_in={0:.1e} | X(h13cn)_out={1:.1e} | db={2:.2f}, chi2 = {3:.2e}".format(X_in, X_out, db_val, chi2_of_model))
+                print("For X(h13cn)_in={0:.1e} | X(h13cn)_out={1:.1e}| Tj={2:.2f}, chi2 = {3:.2e}".format(X_in, X_out, temperature_jump, chi2_of_model))
                 print("****************************")
                 print("****************************\n\n")
 
                 # chisq_grid[i,j,k] = chi2_of_model
 
                 fig = plot_model(models, data_dict=data)
-                plt.suptitle(
-                    "X(h13cn)in = {0:.1e} | X(h13cn)out = {1:.1e} | db={2:.2f} | Tj={3:.1f}".format(
-                        X_in, X_out, db_val, temperature_jump))
+                fig.suptitle(
+                    "X(h13cn)in = {0:.1e} | X(h13cn)out = {1:.1e} | Tj={2:.1f}".format(
+                        X_in, X_out, temperature_jump))
                 fig.savefig(
-                    "test_plots/Xin={0:.1e}_Xout={1:.1e}_db={2:.2f}.png".format(
-                        X_in, X_out, db_val))
+                    "test_plots/Xin={0:.1e}_Xout={1:.1e}_Tj={2:.2f}.png".format(
+                        X_in, X_out, temperature_jump))
+
+
+                end = datetime.datetime.now()
+                end_string = datetime.datetime.strftime(end,"%Y-%m-%d %H:%M:%S")
+
+                print("\n ** Ending at: {0}".format(end_string))
+
+                time_elapsed = (end - beginning)
+                print( "\n ** Time elapsed: {0}".format(time_elapsed))
+
+                break
+            break
+        break
+
+    print("Number of radial points: {0}".format(len(rcctp.r)))
+    plt.savefig("nr={0}_spectrum_t={1}.png".format(len(rcctp.r), time_elapsed.seconds), bbox_inches='tight')
+
             # plt.show()
 
             # pdb.set_trace()
 
 
 plt.show()
+if not np.all(chisq_grid==0):
+    np.save("chisq", chisq_grid)
 
 if False:
+    # don't save the outputs when they're just default zeroes.
+    if not np.all(chisq_grid==0):
+        np.save("chisq", chisq_grid)
+        np.save("db_vals", db_vals)
+        np.save("Xin", inner_abundances)
+        np.save("Xout", outer_abundances)
+
+
     plt.figure()
     plt.imshow(np.squeeze(chisq_grid), extent=(db_values.min(), db_values.max(), outer_abundances.min(), outer_abundances.max() ))
     plt.xlabel("DB")
