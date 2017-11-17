@@ -410,7 +410,7 @@ if False:
 
 
 
-def intermediate_abundance(outer_radii, temp_array, target_temp, abundance_array, model_center=0*u.cm):
+def make_abundance_array(outer_radii, temp_array, target_temp, X_in, X_out, model_center=0*u.cm):
     """ Calculates the abundance in a cell that straddles T_jump. """
 
     r_inner = outer_radii.insert(0, model_center)[:-1]
@@ -421,9 +421,6 @@ def intermediate_abundance(outer_radii, temp_array, target_temp, abundance_array
 
     shell_boundaries_selection = (rau_in < target_radius) & (rau_out > target_radius)
 
-    X_in = abundance_array[0]
-    X_out = abundance_array[-1]
-
     volume_of_whole_shell = 4/3*np.pi*((rau_out - rau_in)[shell_boundaries_selection])**3
     volume_above_temp = 4/3*np.pi*((target_radius - rau_in[shell_boundaries_selection]))**3
 
@@ -431,12 +428,15 @@ def intermediate_abundance(outer_radii, temp_array, target_temp, abundance_array
 
     X_intermediate = (volume_fraction * (X_in - X_out))+X_out
 
-    new_abundance_array = abundance_array.copy()
-    new_abundance_array[shell_boundaries_selection] = X_intermediate
+    abundance_array = np.zeros_like(outer_radii.value)
+    # Here's the jump abundance magic
+    abundance_array[temp_array >= target_temp] = X_in
+    abundance_array[temp_array < target_temp] = X_out
+    abundance_array[shell_boundaries_selection] = X_intermediate
 
     pdb.set_trace()
 
-    return new_abundance_array
+    return abundance_array
 
 
 ratran_output_directory = "./h13cn_emission_models"
@@ -449,13 +449,13 @@ def prepare_and_run_ratran_model(X_in, X_out, db=None, temperature_jump=100*u.K)
     radius_array = rcctp.r * u.cm
     dust_density_array = rcctp.rho_dust * u.g * u.cm**-3
     temp_array = rcctp.a['temp'][-1] * u.K
-    abundance_array = np.zeros_like(radius_array.value)
+    # abundance_array = np.zeros_like(radius_array.value)
 
-    # Here's the jump abundance magic
-    abundance_array[temp_array >= temperature_jump] = X_in
-    abundance_array[temp_array < temperature_jump] = X_out
+    # # Here's the jump abundance magic
+    # abundance_array[temp_array >= temperature_jump] = X_in
+    # abundance_array[temp_array < temperature_jump] = X_out
 
-    abundance_array = intermediate_abundance(radius_array, temp_array, )
+    abundance_array = make_abundance_array(radius_array, temp_array, temperature_jump.value, X_in, X_out)
 
     if db is None:
         fwhm_linewidth =  2.91
