@@ -434,8 +434,6 @@ def make_abundance_array(outer_radii, temp_array, target_temp, X_in, X_out, mode
     abundance_array[temp_array < target_temp] = X_out
     abundance_array[shell_boundaries_selection] = X_intermediate
 
-    pdb.set_trace()
-
     return abundance_array
 
 
@@ -455,7 +453,7 @@ def prepare_and_run_ratran_model(X_in, X_out, db=None, temperature_jump=100*u.K)
     # abundance_array[temp_array >= temperature_jump] = X_in
     # abundance_array[temp_array < temperature_jump] = X_out
 
-    abundance_array = make_abundance_array(radius_array, temp_array, temperature_jump.value, X_in, X_out)
+    abundance_array = make_abundance_array(radius_array, temp_array.value, temperature_jump.value, X_in, X_out)
 
     if db is None:
         fwhm_linewidth =  2.91
@@ -686,12 +684,19 @@ if True and __name__ == "__main__":
         for j, X_out in enumerate(outer_abundances):
             for k, temperature_jump in enumerate(Tj_values):
 
-                # X_in = 0.5e-9
-                # X_out = 1e-11
-                # db_val = 1.746
-                # temperature_jump = 50*u.K
+                print("\n\nTom: the following lines of code will OVERRIDE the grid of model parameters.\n\n")
+                pdb.set_trace()
 
-                vel_center=3.91
+                # X_in = 8.841e-10
+                # X_out = 2.04e-11
+                X_in = 8.681e-10
+                X_out = 1.947e-11
+                # db_val = 1.746
+                # temperature_jump = 72.4*u.K
+                temperature_jump = 71.56*u.K
+
+                # vel_center=3.91
+                vel_center=3.760
                 data = prepare_data(vel_center=vel_center, half_vel_span=20)
                 models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, 
                                                                 abundance=(X_in, X_out), db=None, 
