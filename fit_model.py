@@ -52,16 +52,16 @@ def lnprob(theta, data):
     return lnprior(theta) + lnlike(theta, data)
 
 
-ndim, nwalkers = 3, 6
+ndim, nwalkers = 3, 12
 initial_guess = (6e-10, 1.8e-11, 70)
 pos = [ initial_guess + np.array(initial_guess)/5*np.random.randn(ndim) for i in range(nwalkers)]
 
 import emcee
 
-filename = "model_chain.h5"
+filename = "model_chain_weekend.h5"
 backend = emcee.backends.HDFBackend(filename)
 backend.reset(nwalkers, ndim)
 
 sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, args=(data,), backend=backend)
 
-sampler.run_mcmc(pos, 2, progress=True)
+sampler.run_mcmc(pos, 400, progress=True)
