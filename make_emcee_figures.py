@@ -59,7 +59,7 @@ def produce_figures(save_file):
 
 if __name__ == '__main__':
 
-    plots = produce_figures('copy_model_chain_weekend.h5')
+    plots = produce_figures('copy2_model_chain_weekend.h5')
 
     plots['walkers'].savefig("plots/walkers.pdf", bbox_inches='tight')
     plots['corner'].savefig("plots/corner.pdf", bbox_inches='tight')
