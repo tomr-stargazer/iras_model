@@ -76,7 +76,7 @@ rho[r>=rinf] = rho_at_rinf.value * (rinf/r[r>=rinf])**(-plrho_outer)
 
 rho_dust = rho/100
 
-number_density = rho / rho_at_rinf
+number_density = ((rho*u.g/u.cm**3) / number_density_to_mass_density_of_H2).to(u.cm**-3)
 
 # rho = 1e-2*rho0 * (r/r0)**(plrho)
 #tau    = integrate(rho*kappa,r)
