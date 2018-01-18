@@ -26,7 +26,7 @@ import astropy.constants as c
 import transphere_python.transphereRatran as tR
 
 import reproduce_coutens_crimier_temp_profile as rcctp
-from load_observed_spectra import retrieve_herschel_spectrum, retrieve_timasss_spectrum
+from load_observed_spectra import retrieve_herschel_spectrum, retrieve_timasss_spectrum, retrieve_apex_spectrum
 
 # Parameters of the observed data.
 
@@ -35,8 +35,8 @@ frequency_list = u.Quantity([86.3399, 259.0117, 345.3397, 517.9698, 604.2679,
                              690.5520, 776.8203, 863.0706, 949.3010], u.GHz)
 efficiency_correction_list = [
     0.95/0.78,
-    0.91/0.54,
-    1/0.5,
+    1., # APEX 
+    1., # APEX
     0.96/0.76,
     0.96/0.76,
     0.96/0.75,
@@ -45,21 +45,22 @@ efficiency_correction_list = [
     0.96/0.74
 ]
 
-timasss_filename_list = ['iram13.fits', 'iram289.fits', 'spect466.fits']
+timasss_filename_list = ['iram13.fits'] #, 'iram289.fits', 'spect466.fits']
+apex_filename_list = ["iras16293a_h13cn32_apex.fits", "iras16293a_h13cn43_apex.fits"]
 fit_results_path = os.path.expanduser("~/Documents/Data/Herschel_Science_Archive/IRAS16293/Fit_results")
 hifi_filename_list = [ os.path.join(fit_results_path, 'H13CN_Ju={:02d}_spectrum.fits'.format(Ju))
     for Ju in Jupper_list if Ju >= 6]
-filename_list = timasss_filename_list + hifi_filename_list
+filename_list = timasss_filename_list + apex_filename_list + hifi_filename_list
 
-diameter_dict = {'IRAM': 30*u.m, 'JCMT': 15*u.m, 'HIFI': 3.5*u.m}
+diameter_dict = {'IRAM': 30*u.m, 'JCMT': 15*u.m, 'HIFI': 3.5*u.m, 'APEX': 12*u.m}
 
 
 def which_telescope(frequency):
-    if (frequency >= 80 * u.GHz) and (frequency <= 285 * u.GHz):
+    if (frequency >= 80 * u.GHz) and (frequency <= 100 * u.GHz):
         return 'IRAM'
 
     elif frequency <= 369 * u.GHz:
-        return 'JCMT'
+        return 'APEX'
 
     elif frequency >= 480 * u.GHz:
         return 'HIFI'
@@ -134,9 +135,15 @@ def prepare_individual_data(J_upper, filename, frequency, efficiency,
 
     """
 
-    if frequency <= 369 * u.GHz:
+    if frequency < 100 * u.GHz:
         # do the TIMASSS thing
         vel_array, sp = retrieve_timasss_spectrum(filename, frequency)
+        vels = vel_array.value
+        spectrum = sp.flux
+
+    elif frequency <= 369 * u.GHz:
+        # do the APEX thing
+        vel_array, sp = retrieve_apex_spectrum(filename, frequency)
         vels = vel_array.value
         spectrum = sp.flux
 
@@ -495,6 +502,8 @@ def create_sky_spectra_with_miriad():
 
         if which_telescope(freq) == 'HIFI':
             offset_arcsec = 2.5 * u.arcsec
+        elif which_telescope(freq) == 'APEX':
+            offset_arcsec = 0 * u.arcsec
         else:
             offset_arcsec = 5 * u.arcsec
 
