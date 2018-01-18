@@ -54,6 +54,27 @@ def retrieve_timasss_spectrum(filename, line_frequency, correct_velocity=True):
     return velocity_axis, sp
 
 
+def retrieve_apex_spectrum(filename, line_frequency, correct_velocity=True, smooth_factor=10):
+
+    # also to be figured out.
+    data_location = os.path.expanduser("~/Documents/Data/APEX/Wampfler_APEX_IRAS16293")
+    sp = pyspeckit.Spectrum(os.path.join(data_location, filename))
+
+    sp.xarr.refX = line_frequency
+
+    # SMOOTH it
+    sp.smooth(smooth_factor)
+
+    if correct_velocity:
+        velocity_correction = + (sp.header['VELO-LSR']*u.m/u.s).to(u.km/u.s)
+    else:
+        velocity_correction = 0*u.km/u.s
+
+    velocity_axis = sp.xarr.as_unit(u.km/u.s, velocity_convention='radio') + velocity_correction
+
+    return velocity_axis, sp
+
+
 def demonstration_retrieve_herschel_spectra():
 
     fig = plt.figure()
