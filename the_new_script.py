@@ -20,6 +20,7 @@ from collections import OrderedDict
 import numpy as np
 import matplotlib.pyplot as plt
 import astropy
+import astropy.stats
 import astropy.units as u
 import astropy.constants as c
 
