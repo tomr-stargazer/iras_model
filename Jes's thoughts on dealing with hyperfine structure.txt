@@ -1,0 +1,7 @@
+Jes's thoughts on dealing with hyperfine structure
+
+1. Just sum all the intensity and compare integrated intensities. (This seemed reasonable to me, though sad.)
+
+2. Or, "simulate" the hyperfine structure by taking the line you have and splitting its flux into 3 self-copied versions with flux ratios 1:5:3 (presumably, this would involve first dividing the central bit by .... nine? 1+5+3=9, then adding offset versions on the sides...)
+
+3. My idea (which seems cumbersome) is to assume the h13cn 1-0 and hcn 1-0 are basically equivalent; simulate hcn 1-0 and then use those fluxes (with h13cn abundances) directly.. Jes didn't seem to care one way or the ohter for that.

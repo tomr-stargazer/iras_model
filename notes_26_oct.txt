@@ -1,0 +1,73 @@
+notes
+meeting with jes 26 oct 2017
+
+SAMPLING
+========
+radius sampling (i.e. which radii to sample from) : in the description problem_session .... use the transphere code
+see problem_session.py
+
+Do it in log space! 30 points should be sufficient, 60 is usually very good; start small and then double it, see if it makes a difference in your spectra.
+
+
+
+convolution: straightforward enough!
+just run convolv task
+give it a map as an input
+give it a beam size (fwhm)
+and then give it an output
+and then miriad is clever, so a map in jy/px input, the output maps shoudl come out in jy/beam
+
+and it should also put into the header the beam size which is what you need if you want things on K s
+
+imspect/imspec has an options=tb , giving it in brightness temp if you start in jy/beam
+
+now for the offset thing...
+need to make a decision as to where the emission is centered on
+(jk coutens made the decision - it's on source A)
+
+imspec region='arcsec,box(...)'
+
+if you don't want to just do this easily... 
+0,3,0,3
+gives you a position 3'' off the peak of your emission distribution
+
+STEPS:
+1. convolve with the beam profile
+2. extract the brightness temperature AT A POINT representing the telescope pointing. don't do any weird sums. 
+
+The convolution creates a data product which represents "what brightness temperature would a telescope with this beam pattern see if pointed at a specific point in this map?" so extracting a spectrum from that point is the correct thing to do. 
+
+miriad is very good at helping you keep track of the units, etc
+
+
+
+
+VLA
+===========
+
+my own approach is to use the pipeline product until we run into something concerning.
+Jes & Lars don't have a lot of direct 
+
+"Why not run with it and see what happens?"
+
+also seriously consider bringing John Tobin into the project...
+
+
+FRACTIONATION
+=============
+Don't forget about 14n/15n ratios! There's a nice point in "high-J lines are more fractionated than low-J lines... confirm that!! Be able to make some statements about optical depth, etc."
+Part of that comes in from... once you have the model running.
+
+
+
+MAKE SURE TO SUBTRACT THE MODEL CONTINUUM SPECTRA BASELINE
+
+quick trick: subtract the value of the first channel
+
+do it after the convolution
+
+
+
+==============
+
+Sanity check: compare abundances against Schoeier et al once we get that far.
