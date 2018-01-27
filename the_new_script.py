@@ -699,11 +699,11 @@ if True and __name__ == "__main__":
 
                 # X_in = 8.841e-10
                 # X_out = 2.04e-11
-                X_in = 8.681e-10
-                X_out = 1.947e-11
+                X_in = 8.41e-10
+                X_out = 1.83e-11
                 # db_val = 1.746
                 # temperature_jump = 72.4*u.K
-                temperature_jump = 71.56*u.K
+                temperature_jump = 71.0*u.K
 
                 # vel_center=3.91
                 vel_center=3.760
