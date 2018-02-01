@@ -214,8 +214,11 @@ def model_spectrum_interpolated_onto_data(data_velocity_array, model_velocity_ar
 
     return new_model_spectrum
 
-
+# Deprecated. Use `run_convolve_and_prepare_model_spectra`.
 def prepare_model(abundance, run_ratran=True):
+
+    raise ValueError("Currently deprecated. Use `run_convolve_and_prepare_model_spectra`.")
+
     distance = 120 * u.pc
 
     # rho_nought = 9.0e-16 * u.g * u.cm**-3
