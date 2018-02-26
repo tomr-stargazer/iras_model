@@ -10,7 +10,7 @@ import corner
 from fit_model import *
 
 
-def produce_figures(save_file):
+def produce_figures(save_file, run_bestfit_model=False):
 
     plots = {}
 
@@ -29,8 +29,8 @@ def produce_figures(save_file):
     print("flat log prob shape: {0}".format(log_prob_samples.shape))
     print("flat log prior shape: {0}".format(log_prior_samples))
 
-    fig, axes = plt.subplots(all_samples.ndim, figsize=(10, 7), sharex=True)
-    labels = ["Xin", "Xout", "Tjump"]
+    fig, axes = plt.subplots(all_samples.ndim, figsize=(16, 7), sharex=True)
+    labels = [r"$X_{\rm{in}}$", r"$X_{\rm{out}}$", r"$T_{\rm{jump}}$"]
     for i in range(all_samples.ndim):
         ax = axes[i]
         ax.plot(all_samples[:, :, i], "k", alpha=0.3)
@@ -41,28 +41,34 @@ def produce_figures(save_file):
 
     plots['walkers'] = fig
     
-    samples_plus_logprobs = np.concatenate((thinned_samples, log_prob_samples[:, None]), axis=1)
-    labels += ["log prob"]
+    # samples_plus_logprobs = np.concatenate((thinned_samples, log_prob_samples[:, None]), axis=1)
+    # labels += ["log prob"]
 
-    plots['corner'] = corner.corner(samples_plus_logprobs, labels=labels)
+    plots['corner'] = corner.corner(thinned_samples, labels=labels, #use_math_text=True, 
+                                    quantiles=[0.16,0.50,0.84], bins=25)
 
     bestfit = [np.percentile(thinned_samples[:, x], [50])[0] for x in range(thinned_samples.ndim+1)]
     X_in, X_out, T_jump = bestfit
 
-    models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, 
-                                                    abundance=(X_in, X_out), db=None, 
-                                                    temperature_jump=T_jump*u.K)
+    if run_bestfit_model:
+        models = run_convolve_and_prepare_model_spectra(data, vel_center=vel_center, 
+                                                        abundance=(X_in, X_out), db=None, 
+                                                        temperature_jump=T_jump*u.K)
 
-    plots['model'] = plot_model(models, data_dict=data)
+        plots['model'] = plot_model(models, data_dict=data)
 
     return plots
 
+
 if __name__ == '__main__':
 
-    plots = produce_figures('copy2_model_chain_weekend.h5')
+    plots = produce_figures('model_chain_wampf.h5', run_bestfit_model=True)
 
     plots['walkers'].savefig("plots/walkers.pdf", bbox_inches='tight')
     plots['corner'].savefig("plots/corner.pdf", bbox_inches='tight')
-    plots['model'].savefig("plots/model.pdf", bbox_inches='tight')
+    try:
+        plots['model'].savefig("plots/model.pdf", bbox_inches='tight')
+    except KeyError:
+        pass
 
     plt.show()
